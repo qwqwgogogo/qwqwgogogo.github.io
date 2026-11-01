@@ -123,6 +123,8 @@ function readDocs(dir, kind) {
 				subject: typeof data.subject === 'string' ? data.subject : '',
 				// 笔记自己声明的考点；文章没有这个字段
 				declared: Array.isArray(data.tags) ? data.tags : [],
+				// frontmatter 里的 description 是「这篇讲什么」的目录句，不能当术语解释
+				prose: stripLinks(body),
 				plain: stripLinks(plain),
 				terms: bag,
 			};
@@ -348,11 +350,21 @@ const SPECIAL = '.+*?^$()[]{}|';
 function sentencePool(text) {
 	const clean = text.replace(/`{3}[\s\S]*?`{3}/g, ' ').replace(/`([^`\n]+)`/g, '$1');
 	return (clean.match(SENTENCE) ?? [])
-		.map((x) => x.replace(/^[>\-*+\s]+/, '').replace(/[*`]/g, '').replace(/\s+/g, ' ').trim())
+		.map((x) =>
+			x
+				.replace(/^[>\-*+\s]+/, '')
+				.replace(/[*`]/g, '')
+				.replace(/\s+/g, ' ')
+				// 引出下文的收尾标点不是解释的一部分，留着面板上像半句话
+				.replace(/[：:，,；;、]+$/, '')
+				.trim(),
+		)
+		// 以连接词收尾的是被截断的半句，读起来像话没说完
+		.filter((x) => !/(所以|因为|并且|而且|然后|或者|但是)$/.test(x))
 		.filter((x) => x.length > 0 && !x.includes('|') && !x.startsWith('#'));
 }
 
-const pools = docs.map((d) => ({ doc: d, sentences: sentencePool(d.plain) }));
+const pools = docs.map((d) => ({ doc: d, sentences: sentencePool(d.prose) }));
 
 /** ASCII 词要整词匹配：连字符算词内字符，否则 PATH 会命中 clip-path */
 const termRe = new Map();
@@ -368,23 +380,35 @@ function hasTerm(text, label) {
 	return re ? re.test(text) : text.includes(label);
 }
 
+// 括号和书名号里的词不算数：「报错（None、missing required field、got object）」这句讲的不是 got。
+// 但短括号往往是译名对照（写回（write-back）），不能一起砍掉——所以只屏蔽带顿号的列举和长插入语。
+const PAREN = /（[^）]*）|\([^)]*\)|「[^」]*」/g;
+const stripAside = (text) =>
+	text.replace(PAREN, (m) => (/[、，,]/.test(m) || [...m].length > 24 ? '（）' : m));
+const mentionOutsideParen = (text, label) => hasTerm(stripAside(text), label);
+
 function scoreSentence(x) {
 	const len = [...x].length;
-	if (len < 12 || len > 120) return -1;
+	if (len < 12 || len > 120) return null; // 太短撑不起一句解释，太长是在讲故事
 	let score = 0;
 	if (DEF_MARK.test(x)) score += 4;
 	if (x.includes('——') || x.includes(':') || x.includes('：')) score += 1;
-	return score - Math.abs(len - 44) / 22; // 太短说不清，太长是在讲故事
+	// 长度只做同分时的微调：不能因为它把整句否掉，否则一个词只有一句像样的话时就空着
+	return score + Math.max(0, 1 - Math.abs(len - 44) / 76);
 }
 
 function glossFor(label) {
+	// 有笔记把这个词声明成考点，就只从那些笔记里挑句子。
+	// 否则文章里「顺带提到这个词」的那句会抢走解释：我写过一句「移码这批词全空着」，它就差点变成移码的定义。
+	const owners = pools.filter(({ doc }) => doc.declared.includes(label));
+	const pool = owners.length ? owners : pools;
 	let best = null;
-	for (const { doc, sentences } of pools) {
+	for (const { doc, sentences } of pool) {
 		if (!hasTerm(doc.plain, label)) continue;
 		for (const x of sentences) {
-			if (!hasTerm(x, label)) continue;
+			if (!mentionOutsideParen(x, label)) continue;
 			const score = scoreSentence(x);
-			if (score < 0) continue;
+			if (score === null) continue;
 			if (!best || score > best.score) best = { score, text: x, slug: doc.slug, title: doc.title, kind: doc.kind };
 		}
 	}

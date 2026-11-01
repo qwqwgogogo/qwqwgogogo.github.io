@@ -19,7 +19,7 @@ comfy-mcp:
 
 ```yaml
 comfy-mcp:
-  command: E:\\...\\venv\\Scripts\\comfy-mcp.exe
+  command: <项目根目录>\\venv\\Scripts\\comfy-mcp.exe
 ```
 
 规则：**给 agent 写的 MCP 配置里，命令一律用绝对路径。** 让它去猜 PATH 没有任何好处。
