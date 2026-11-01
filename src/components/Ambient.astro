@@ -1,0 +1,13 @@
+---
+/**
+ * 背景三层：网格 / 两团漂移光晕 / 颗粒（颗粒见 motion.css 的 body::after）。
+ * 视差写在 .drift 外层，动画写在 .orb 本体，两者都用 transform，不能挤在同一层。
+ * 纯装饰，不进无障碍树，也不接指针事件。
+ */
+---
+
+<div class="ambient" aria-hidden="true">
+	<i class="mesh" data-parallax="0.05"></i>
+	<div class="drift" data-parallax="0.14"><i class="orb a"></i></div>
+	<div class="drift" data-parallax="-0.09"><i class="orb b"></i></div>
+</div>

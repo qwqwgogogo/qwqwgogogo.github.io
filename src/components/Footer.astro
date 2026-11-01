@@ -2,8 +2,9 @@
 const today = new Date();
 ---
 
-<footer>
-	&copy; {today.getFullYear()} qwqw.
+<footer data-reveal>
+	<div class="rule" aria-hidden="true"></div>
+	<p class="sign">&copy; {today.getFullYear()} qwqw.</p>
 	<div class="social-links">
 		<a href="/rss.xml">
 			<span class="sr-only">RSS 订阅</span>
@@ -28,22 +29,50 @@ const today = new Date();
 
 <style>
 	footer {
-		padding: 2em 1em 6em 1em;
-		background: linear-gradient(var(--gray-gradient)) no-repeat;
-		color: rgb(var(--gray));
+		padding: 4em 1em 6em;
 		text-align: center;
+		color: rgb(var(--gray));
+	}
+	.rule {
+		width: 240px;
+		height: 1px;
+		margin: 0 auto 2em;
+		background: linear-gradient(90deg, transparent, var(--border), transparent);
+	}
+	.sign {
+		margin: 0;
+		font-family: var(--font-mono);
+		font-size: 0.82rem;
+		letter-spacing: 0.08em;
 	}
 	.social-links {
 		display: flex;
 		justify-content: center;
-		gap: 1em;
-		margin-top: 1em;
+		gap: 0.6em;
+		margin-top: 1.2em;
 	}
 	.social-links a {
+		display: grid;
+		place-items: center;
+		width: 40px;
+		height: 40px;
+		border: 1px solid var(--border);
+		border-radius: 11px;
+		background: var(--surface);
 		text-decoration: none;
 		color: rgb(var(--gray));
+		transition:
+			color 0.3s var(--e-out),
+			border-color 0.3s var(--e-out),
+			transform 0.35s var(--e-out);
 	}
 	.social-links a:hover {
-		color: rgb(var(--gray-dark));
+		color: var(--accent);
+		border-color: rgba(165, 180, 252, 45%);
+		transform: translateY(-3px);
+	}
+	.social-links svg {
+		width: 20px;
+		height: 20px;
 	}
 </style>

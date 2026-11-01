@@ -1,5 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
+import Ambient from '../../components/Ambient.astro';
 import BaseHead from '../../components/BaseHead.astro';
 import Footer from '../../components/Footer.astro';
 import FormattedDate from '../../components/FormattedDate.astro';
@@ -17,20 +18,35 @@ const posts = (await getCollection('blog')).sort(
 		<BaseHead title={`文章 · ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
 	</head>
 	<body>
+		<Ambient />
 		<Header />
 		<main>
-			<h1 class="heading">文章</h1>
-			<p class="count">{posts.length} 篇</p>
-			<ul>
+			<header class="head">
+				<h1 class="heading" data-reveal="chars">
+					{
+						[...'文章'].map(
+							(ch, i) =>
+								<span class="ch" style={`--rd:${i * 90}ms`}>
+									{ch}
+								</span>,
+						)
+					}
+				</h1>
+				<p class="count" data-reveal style="--rd:220ms">
+					共 <span>{posts.length}</span> 篇 · 记笔记、项目和一时想到的东西
+				</p>
+			</header>
+			<ul data-stagger data-stagger-step="90">
 				{
 					posts.map((post) => (
-						<li>
-							<article>
+						<li data-reveal>
+							<article class="row" data-spotlight>
 								<h2>
 									<a href={`/blog/${post.id}/`}>{post.data.title}</a>
 								</h2>
 								<FormattedDate date={post.data.pubDate} />
 								<p>{post.data.description}</p>
+								<span class="go" aria-hidden="true">读这篇 →</span>
 							</article>
 						</li>
 					))
@@ -42,64 +58,131 @@ const posts = (await getCollection('blog')).sort(
 </html>
 
 <style>
+	main {
+		width: 900px;
+		max-width: calc(100% - 2.5em);
+		padding: 0 1.25em;
+	}
+	.head {
+		padding: clamp(3.5rem, 9vh, 6rem) 0 2.4rem;
+	}
 	.heading {
-		font-size: 2.4rem;
-		margin-bottom: 0.2rem;
+		margin: 0;
+		font-size: clamp(3rem, 9vw, 5.5rem);
+		line-height: 0.95;
+		letter-spacing: -0.045em;
+	}
+	.heading :global(.ch) {
+		background: linear-gradient(175deg, #f4f6fc 0%, var(--accent) 58%, #67e8f9 100%);
+		background-size: 100% 200%;
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+		animation: sheen 8s var(--e-io) infinite alternate;
+	}
+	@keyframes sheen {
+		from {
+			background-position: 50% 0%;
+		}
+		to {
+			background-position: 50% 100%;
+		}
 	}
 	.count {
-		color: rgb(var(--gray));
-		font-size: 0.95rem;
-		margin-bottom: 2.5rem;
+		margin: 1rem 0 0;
+		font-family: var(--font-mono);
+		font-size: 0.86rem;
+		letter-spacing: 0.05em;
+		color: rgba(var(--gray), 80%);
+	}
+	.count span {
+		color: var(--accent);
 	}
 	ul {
 		list-style: none;
 		margin: 0;
 		padding: 0;
-	}
-	li {
-		padding: 1.2rem 0;
 		border-top: 1px solid var(--border);
 	}
-	article {
+	li {
+		border-bottom: 1px solid var(--border);
+	}
+	.row {
+		position: relative;
 		display: grid;
-		grid-template-columns: 1fr auto;
-		grid-template-areas: 'title date' 'desc desc';
+		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-areas:
+			'title date'
+			'desc desc'
+			'go go';
 		gap: 0 1.5rem;
 		align-items: baseline;
+		padding: 1.6rem 1.2rem;
+		border-radius: 14px;
+		transition: padding 0.45s var(--e-expo);
+	}
+	.row:hover {
+		padding-left: 1.7rem;
 	}
 	h2 {
 		grid-area: title;
-		font-size: 1.4rem;
 		margin: 0;
+		font-size: 1.4rem;
 	}
 	h2 a {
 		color: rgb(var(--black));
 		text-decoration: none;
+		transition: color 0.3s var(--e-out);
 	}
 	h2 a:hover {
 		color: var(--accent);
 	}
-	article :global(time) {
+	.row :global(time) {
 		grid-area: date;
-		color: rgb(var(--gray));
-		font-size: 0.9rem;
+		font-family: var(--font-mono);
+		font-size: 0.82rem;
+		letter-spacing: 0.04em;
+		color: rgba(var(--gray), 80%);
 		white-space: nowrap;
 	}
 	p {
 		grid-area: desc;
-		margin: 0.4rem 0 0;
+		margin: 0.5rem 0 0;
 		color: rgb(var(--gray));
-		font-size: 1rem;
-		line-height: 1.6;
+		font-size: 0.98rem;
+		line-height: 1.65;
+	}
+	.go {
+		grid-area: go;
+		display: inline-block;
+		margin-top: 0.9rem;
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		letter-spacing: 0.1em;
+		color: var(--accent);
+		opacity: 0;
+		transform: translate3d(-6px, 0, 0);
+		transition:
+			opacity 0.4s var(--e-out),
+			transform 0.5s var(--e-expo);
+	}
+	.row:hover .go {
+		opacity: 1;
+		transform: none;
 	}
 	@media (max-width: 720px) {
-		article {
+		.row {
 			grid-template-columns: 1fr;
-			grid-template-areas: 'date' 'title' 'desc';
+			grid-template-areas:
+				'date'
+				'title'
+				'desc'
+				'go';
 			gap: 0;
+			padding: 1.3rem 0.6rem;
 		}
-		article :global(time) {
-			margin-bottom: 0.3rem;
+		.row :global(time) {
+			margin-bottom: 0.35rem;
 		}
 	}
 </style>

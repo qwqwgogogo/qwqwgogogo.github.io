@@ -1,0 +1,365 @@
+/*
+ * 动效基座：所有效果都是 opt-in（data-* 属性），并且
+ *  1) 未加 .js 时（脚本没跑）内容完全可见；
+ *  2) prefers-reduced-motion 下全部退化为静态。
+ * 只改 transform / opacity / clip-path / 自定义属性，不碰布局属性。
+ */
+
+@property --spot {
+	syntax: '<number>';
+	inherits: false;
+	initial-value: 0;
+}
+
+:root {
+	--e-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+	--e-expo: cubic-bezier(0.16, 1, 0.3, 1);
+	--e-io: cubic-bezier(0.65, 0, 0.35, 1);
+	--font-mono: ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas,
+		'Noto Sans Mono CJK SC', monospace;
+	--lift: 0px;
+	--scroll: 0;
+}
+
+/* ---------- 揭示 ---------- */
+.js [data-reveal] {
+	opacity: 0;
+	transform: translate3d(0, 16px, 0);
+	filter: blur(7px);
+	transition:
+		opacity 0.7s var(--e-out) var(--rd, 0ms),
+		transform 0.85s var(--e-expo) var(--rd, 0ms),
+		filter 0.7s var(--e-out) var(--rd, 0ms);
+}
+.js [data-reveal='left'] {
+	transform: translate3d(-18px, 0, 0);
+}
+.js [data-reveal='grow'] {
+	transform: scaleX(0);
+	transform-origin: left center;
+	filter: none;
+	opacity: 1;
+}
+/* 逐字标题：容器自身不动，只由 .ch 动 */
+.js [data-reveal='chars'] {
+	opacity: 1;
+	transform: none;
+	filter: none;
+	transition: none;
+}
+.js [data-reveal].is-in {
+	opacity: 1;
+	transform: none;
+	filter: none;
+}
+.js [data-reveal='grow'].is-in {
+	transform: scaleX(1);
+}
+
+/* 线性遮罩上推，用于标题与小节标签。静止态留 2px 可见，
+   否则零面积会让 IntersectionObserver 永远不回调。 */
+.js [data-mask] {
+	clip-path: inset(0 0 calc(100% - 2px) 0);
+	transition: clip-path 0.95s var(--e-expo) var(--rd, 0ms);
+}
+.js [data-mask].is-in {
+	clip-path: inset(-18% -6% -14% -6%);
+}
+.js [data-mask][data-reveal] {
+	opacity: 1;
+	transform: none;
+	filter: none;
+}
+
+.js [data-reveal='chars'] .ch {
+	display: inline-block;
+	transform: translate3d(0, 92%, 0) rotate(7deg);
+	opacity: 0;
+	transition:
+		transform 1s var(--e-expo) var(--rd, 0ms),
+		opacity 0.5s linear var(--rd, 0ms);
+}
+.js [data-reveal='chars'].is-in .ch {
+	transform: none;
+	opacity: 1;
+}
+
+/* ---------- 光斑卡片：背景层发光 + 1px 发光边框 ---------- */
+[data-spotlight] {
+	--spot: 0;
+	background-image: radial-gradient(
+		32rem 22rem at var(--mx, 50%) var(--my, 50%),
+		rgba(165, 180, 252, calc(0.13 * var(--spot))),
+		transparent 62%
+	);
+	background-repeat: no-repeat;
+	transition: --spot 0.5s var(--e-out);
+}
+[data-spotlight].is-hot {
+	--spot: 1;
+}
+.js [data-spotlight]::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	padding: 1px;
+	pointer-events: none;
+	background:
+		radial-gradient(
+			16rem 12rem at var(--mx, 50%) var(--my, 50%),
+			rgba(165, 180, 252, 0.8),
+			transparent 68%
+		),
+		linear-gradient(120deg, rgba(103, 232, 249, 0.22), transparent 40%);
+	-webkit-mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor;
+	mask-composite: exclude;
+	opacity: 0;
+	transition: opacity 0.45s var(--e-out);
+}
+.js [data-spotlight].is-hot::after {
+	opacity: 1;
+}
+
+/* ---------- 3D 倾斜 / 磁性按钮 ---------- */
+[data-tilt] {
+	transform:
+		perspective(760px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg))
+		translate3d(0, var(--lift, 0px), 0);
+	transition:
+		transform 0.5s var(--e-out),
+		background-color 0.4s var(--e-out);
+}
+[data-magnetic] {
+	transform: translate3d(var(--tx, 0px), calc(var(--ty, 0px) + var(--lift, 0px)), 0);
+	transition: transform 0.42s var(--e-out);
+}
+[data-magnetic]:hover {
+	--lift: -2px;
+}
+
+/* ---------- 环境层 ---------- */
+.ambient {
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	overflow: clip;
+	pointer-events: none;
+}
+.ambient .mesh {
+	position: absolute;
+	inset: -1px;
+	background-image:
+		linear-gradient(to right, rgba(165, 180, 252, 0.075) 1px, transparent 1px),
+		linear-gradient(to bottom, rgba(165, 180, 252, 0.075) 1px, transparent 1px);
+	background-size: 74px 74px;
+	-webkit-mask-image: radial-gradient(78% 55% at 50% 2%, #000 12%, transparent 72%);
+	mask-image: radial-gradient(78% 55% at 50% 2%, #000 12%, transparent 72%);
+	transform: translate3d(0, var(--py, 0px), 0);
+}
+.ambient .drift {
+	position: absolute;
+	inset: 0;
+	contain: layout paint;
+	transform: translate3d(0, var(--py, 0px), 0);
+}
+.ambient .orb {
+	position: absolute;
+	width: 46rem;
+	height: 46rem;
+	border-radius: 50%;
+	opacity: 0.85;
+	will-change: transform;
+}
+.ambient .orb.a {
+	top: -20rem;
+	right: -12rem;
+	background: radial-gradient(
+		circle,
+		rgba(129, 140, 248, 0.3) 0%,
+		rgba(129, 140, 248, 0.09) 42%,
+		transparent 68%
+	);
+	animation: drift-a 26s var(--e-io) infinite alternate;
+}
+.ambient .orb.b {
+	top: 26rem;
+	left: -20rem;
+	background: radial-gradient(
+		circle,
+		rgba(103, 232, 249, 0.16) 0%,
+		rgba(56, 189, 248, 0.05) 45%,
+		transparent 70%
+	);
+	animation: drift-b 34s var(--e-io) infinite alternate;
+}
+@keyframes drift-a {
+	from {
+		transform: translate3d(0, 0, 0) scale(1);
+	}
+	to {
+		transform: translate3d(-7rem, 5rem, 0) scale(1.14);
+	}
+}
+@keyframes drift-b {
+	from {
+		transform: translate3d(0, 0, 0) scale(1.05);
+	}
+	to {
+		transform: translate3d(6rem, -7rem, 0) scale(0.92);
+	}
+}
+body::after {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: 3;
+	pointer-events: none;
+	opacity: 0.045;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- 滚动进度线（页眉底部） ---------- */
+.scroll-progress {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: -1px;
+	height: 2px;
+	pointer-events: none;
+	overflow: hidden;
+}
+.scroll-progress i {
+	display: block;
+	height: 100%;
+	background: linear-gradient(90deg, var(--accent-dark), #67e8f9);
+	transform: scaleX(var(--scroll));
+	transform-origin: left center;
+}
+/* 支持滚动驱动动画的浏览器直接交给合成器，不经过 JS 主线程 */
+@supports (animation-timeline: scroll()) {
+	.scroll-progress i {
+		animation: progress-grow linear both;
+		animation-timeline: scroll(root block);
+	}
+	@keyframes progress-grow {
+		from {
+			transform: scaleX(0);
+		}
+		to {
+			transform: scaleX(1);
+		}
+	}
+}
+
+/* ---------- 指针光斑（hero 级） ---------- */
+[data-glow] {
+	--go: 0;
+}
+[data-glow]::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background: radial-gradient(
+		22rem 22rem at var(--gx, 50%) var(--gy, 50%),
+		rgba(129, 140, 248, 0.14),
+		transparent 65%
+	);
+	opacity: var(--go);
+	transition: opacity 0.6s var(--e-out);
+}
+
+/* ---------- 行内链接的下划线扫入 ---------- */
+.sweep {
+	position: relative;
+	text-decoration: none;
+}
+.sweep::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: -2px;
+	height: 1px;
+	background: currentColor;
+	transform: scaleX(0);
+	transform-origin: right center;
+	transition: transform 0.4s var(--e-expo);
+}
+.sweep:hover::after {
+	transform: scaleX(1);
+	transform-origin: left center;
+}
+
+/* ---------- 页间过渡 ---------- */
+::view-transition-image-pair(root) {
+	isolation: auto;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+	mix-blend-mode: normal;
+}
+/* 这里刻意不写 var(--e-out)：自定义属性参与 animation 简写时，
+   一旦替换结果不合法，整条 animation 会被丢掉，页间过渡就退化成硬切。 */
+::view-transition-old(root) {
+	animation: vt-out 0.26s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+::view-transition-new(root) {
+	animation: vt-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes vt-out {
+	from {
+		opacity: 1;
+		transform: none;
+	}
+	to {
+		opacity: 0;
+		transform: translate3d(0, -1.2rem, 0);
+	}
+}
+@keyframes vt-in {
+	from {
+		clip-path: inset(0 0 100% 0);
+	}
+	to {
+		clip-path: inset(0 0 0 0);
+	}
+}
+
+/* ---------- 退化路径 ---------- */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+	}
+	.js [data-reveal],
+	.js [data-reveal].is-in,
+	.js [data-mask].is-in {
+		opacity: 1;
+		transform: none;
+		filter: none;
+		clip-path: none;
+	}
+	.js [data-reveal='chars'] .ch {
+		opacity: 1;
+		transform: none;
+	}
+	.cue {
+		display: none;
+	}
+	::view-transition-old(root),
+	::view-transition-new(root) {
+		animation: none;
+	}
+}

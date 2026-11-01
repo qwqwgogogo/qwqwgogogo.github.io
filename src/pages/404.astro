@@ -1,0 +1,141 @@
+---
+import Ambient from '../components/Ambient.astro';
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<BaseHead title={`404 · ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
+	</head>
+	<body>
+		<Ambient />
+		<Header />
+		<main class="lost">
+			<p class="code" data-reveal="chars" aria-hidden="true">
+				{
+					[...'404'].map(
+						(ch, i) =>
+							<span class="ch" style={`--rd:${i * 80}ms`}>
+								{ch}
+							</span>,
+					)
+				}
+			</p>
+			<h1 data-mask data-reveal style="--rd:260ms">这个地址下没有东西</h1>
+			<p class="hint" data-reveal style="--rd:360ms">
+				可能是我改过路径。从下面两个地方回去：
+			</p>
+			<div class="cta" data-reveal data-stagger style="--rd:460ms">
+				<a class="back" href="/" data-magnetic="7">首页</a>
+				<a class="back" href="/blog/" data-magnetic="7">文章</a>
+			</div>
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<style>
+	.lost {
+		display: grid;
+		justify-items: start;
+		padding-top: clamp(3rem, 12vh, 8rem);
+	}
+	.code {
+		position: relative;
+		margin: 0;
+		font-family: var(--font-mono);
+		font-size: clamp(6rem, 22vw, 12rem);
+		font-weight: 700;
+		line-height: 0.85;
+		letter-spacing: -0.06em;
+		color: rgb(var(--black));
+	}
+	.code::before,
+	.code::after {
+		content: '404';
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+	}
+	.code::before {
+		color: var(--accent-dark);
+		mix-blend-mode: screen;
+		animation: glitch-a 3.4s steps(2, end) infinite;
+	}
+	.code::after {
+		color: #67e8f9;
+		mix-blend-mode: screen;
+		animation: glitch-b 4.2s steps(2, end) infinite;
+	}
+	@keyframes glitch-a {
+		0%,
+		86%,
+		100% {
+			transform: none;
+			opacity: 0;
+		}
+		88% {
+			transform: translate3d(-6px, 3px, 0);
+			opacity: 0.75;
+		}
+		92% {
+			transform: translate3d(4px, -2px, 0);
+			opacity: 0.6;
+		}
+		96% {
+			transform: translate3d(-2px, 1px, 0);
+			opacity: 0.4;
+		}
+	}
+	@keyframes glitch-b {
+		0%,
+		80%,
+		100% {
+			transform: none;
+			opacity: 0;
+		}
+		84% {
+			transform: translate3d(5px, -4px, 0);
+			opacity: 0.7;
+		}
+		90% {
+			transform: translate3d(-7px, 2px, 0);
+			opacity: 0.5;
+		}
+		95% {
+			transform: translate3d(2px, 3px, 0);
+			opacity: 0.35;
+		}
+	}
+	h1 {
+		margin: 1.6rem 0 0.6rem;
+		font-size: clamp(1.6rem, 4vw, 2.4rem);
+		letter-spacing: -0.03em;
+	}
+	.hint {
+		margin: 0;
+		color: rgb(var(--gray));
+	}
+	.cta {
+		display: flex;
+		gap: 0.7rem;
+		margin-top: 2rem;
+	}
+	.back {
+		padding: 0.6em 1.4em;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: var(--surface);
+		color: rgb(var(--black));
+		text-decoration: none;
+		transition: border-color 0.3s var(--e-out);
+	}
+	.back:hover {
+		border-color: rgba(165, 180, 252, 50%);
+		color: var(--accent);
+	}
+</style>

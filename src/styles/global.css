@@ -13,20 +13,24 @@
 	--gray: 139, 148, 168;
 	--gray-light: 30, 36, 49;
 	--gray-dark: 233, 237, 246;
-	--gray-gradient: var(--bg), var(--bg);
 	--box-shadow:
 		0 2px 6px rgba(0, 0, 0, 40%), 0 8px 24px rgba(0, 0, 0, 33%),
 		0 16px 32px rgba(0, 0, 0, 33%);
 	color-scheme: dark;
+}
+html {
+	scroll-padding-top: 5rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+	html {
+		scroll-behavior: smooth;
+	}
 }
 body {
 	font-family: var(--font-atkinson);
 	margin: 0;
 	padding: 0;
 	text-align: left;
-	background:
-		radial-gradient(60rem 30rem at 80% -10%, rgba(129, 140, 248, 14%), transparent 70%),
-		linear-gradient(var(--gray-gradient)) no-repeat;
 	background-color: var(--bg);
 	color: rgb(var(--gray-dark));
 	font-size: 20px;
@@ -34,6 +38,7 @@ body {
 	word-wrap: break-word;
 	overflow-wrap: break-word;
 	min-height: 100vh;
+	-webkit-font-smoothing: antialiased;
 }
 ::selection {
 	background: rgba(129, 140, 248, 35%);
@@ -107,16 +112,22 @@ code {
 	padding: 2px 5px;
 	background-color: rgb(var(--gray-light));
 	border-radius: 2px;
+	font-family: var(--font-mono);
+	font-size: 0.9em;
 }
 pre {
 	padding: 1.5em;
-	border-radius: 8px;
+	border-radius: 12px;
 	background: var(--surface) !important;
 	border: 1px solid var(--border);
 	overflow-x: auto;
+	font-family: var(--font-mono);
+	font-size: 0.9rem;
+	line-height: 1.65;
 }
 pre > code {
 	all: unset;
+	font-family: var(--font-mono);
 }
 blockquote {
 	border-left: 4px solid var(--accent);

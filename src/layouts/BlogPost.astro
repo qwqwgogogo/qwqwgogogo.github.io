@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
+import Ambient from '../components/Ambient.astro';
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
@@ -37,25 +38,84 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 				color: rgb(var(--gray-dark));
 			}
 			.title {
-				margin-bottom: 1em;
-				padding: 1em 0;
+				margin-bottom: 1.4em;
+				padding: clamp(2.5rem, 8vh, 4.5rem) 0 1em;
 				text-align: center;
-				line-height: 1;
+				line-height: 1.15;
 			}
 			.title h1 {
 				margin: 0 0 0.5em 0;
+				font-size: clamp(1.9rem, 4.6vw, 2.9rem);
+				letter-spacing: -0.03em;
 			}
 			.date {
-				margin-bottom: 0.5em;
-				color: rgb(var(--gray));
+				margin-bottom: 0.7em;
+				font-family: var(--font-mono);
+				font-size: 0.82rem;
+				letter-spacing: 0.08em;
+				color: var(--accent);
 			}
 			.last-updated-on {
 				font-style: italic;
+			}
+			.rule {
+				border: none;
+				height: 1px;
+				margin: 0;
+				background: linear-gradient(
+					90deg,
+					transparent,
+					var(--border) 15%,
+					var(--accent) 50%,
+					var(--border) 85%,
+					transparent
+				);
+			}
+			.prose :global(a) {
+				color: var(--accent);
+				text-decoration: none;
+				background-image: linear-gradient(currentColor, currentColor);
+				background-size: 0% 1px;
+				background-repeat: no-repeat;
+				background-position: 0 100%;
+				transition: background-size 0.45s var(--e-expo);
+			}
+			.prose :global(a:hover) {
+				background-size: 100% 1px;
+			}
+			.prose :global(code) {
+				padding: 0.14em 0.42em;
+				border: 1px solid var(--border);
+				border-radius: 6px;
+				background: rgba(165, 180, 252, 7%);
+				font-family: var(--font-mono);
+				font-size: 0.88em;
+				color: var(--accent);
+			}
+			.prose :global(pre code) {
+				border: none;
+				background: none;
+				padding: 0;
+				color: inherit;
+			}
+			.prose :global(blockquote) {
+				border-left: 2px solid var(--accent);
+				padding-left: 1.1rem;
+				color: rgb(var(--gray));
+			}
+			.prose :global(li)::marker {
+				color: var(--accent);
+			}
+			@media (prefers-reduced-motion: reduce) {
+				.prose :global(a) {
+					transition: none;
+				}
 			}
 		</style>
 	</head>
 
 	<body>
+		<Ambient />
 		<Header />
 		<main>
 			<article>
@@ -64,7 +124,7 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 				</div>
 				<div class="prose">
 					<div class="title">
-						<div class="date">
+						<div class="date" data-reveal style="--rd:60ms">
 							<FormattedDate date={pubDate} />
 							{updatedDate && (
 								<div class="last-updated-on">
@@ -72,13 +132,15 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 								</div>
 							)}
 						</div>
-						<h1>{title}</h1>
-						<hr />
+						<h1 data-mask data-reveal style="--rd:140ms">{title}</h1>
+						<hr class="rule" data-reveal="grow" style="--rd:260ms" />
 					</div>
-					<slot />
+					<div data-reveal style="--rd:340ms">
+						<slot />
+					</div>
 				</div>
 			</article>
 		</main>
 		<Footer />
 	</body>
-</html>
+	</html>

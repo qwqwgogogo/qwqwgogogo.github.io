@@ -12,13 +12,40 @@ const isActive = href === pathname || href === '/' + (subpath?.[0] || '');
 <a href={href} class:list={[className, { active: isActive }]} {...props}>
 	<slot />
 </a>
+
 <style>
+	/* 这里的样式必须留在本组件：scoped 选择器匹配不到 Header.astro 里的元素。 */
 	a {
+		position: relative;
 		display: inline-block;
+		padding: 0.45em 0.7em;
+		border-radius: 8px;
+		font-size: 0.95rem;
+		color: rgb(var(--black));
 		text-decoration: none;
+		transition: color 0.3s var(--e-out);
+	}
+	a::after {
+		content: '';
+		position: absolute;
+		left: 0.7em;
+		right: 0.7em;
+		bottom: 0.15em;
+		height: 2px;
+		border-radius: 2px;
+		background: linear-gradient(90deg, var(--accent), #67e8f9);
+		transform: scaleX(0);
+		transform-origin: left center;
+		transition: transform 0.45s var(--e-expo);
+	}
+	a:hover {
+		color: var(--accent);
+	}
+	a:hover::after,
+	a.active::after {
+		transform: scaleX(1);
 	}
 	a.active {
-		font-weight: bolder;
-		text-decoration: underline;
+		color: var(--accent);
 	}
 </style>

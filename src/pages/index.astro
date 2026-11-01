@@ -1,5 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
+import Ambient from '../components/Ambient.astro';
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
@@ -23,14 +24,17 @@ const projects = [
 		desc: 'Windows 桌面应用：实时显示 GPU / CPU 显存占用，加载模型前先预估资源影响，并按硬件推荐最合适的模型。',
 		tags: ['Python', '桌面应用'],
 		url: 'https://github.com/qwqwgogogo/Ollama-Model-Manager',
+		secondary: { label: '下载 exe', url: 'https://github.com/qwqwgogogo/Ollama-Model-Manager/releases/latest' },
 	},
 	{
 		name: 'SWEF-AT',
-		desc: '模型源码与复现脚本。',
+		desc: '稳定性加权的集成特征过滤方法：融合六个异构过滤器打分，再用自适应拐点自动确定保留特征数。论文源码与复现脚本。',
 		tags: ['Python', '研究复现'],
 		url: 'https://github.com/qwqwgogogo/SWEF-AT',
 	},
 ];
+
+const handle = 'qwqwgogogo';
 ---
 
 <!doctype html>
@@ -39,58 +43,96 @@ const projects = [
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
 	</head>
 	<body>
+		<Ambient />
 		<Header />
 		<main>
-			<section class="hero">
-				<h1 class="name">{SITE_TITLE}</h1>
-				<p class="lede">{SITE_DESCRIPTION}</p>
-				<div class="cta">
-					<a class="btn primary" href="/blog/">看文章</a>
-					<a class="btn" href="https://github.com/qwqwgogogo">GitHub</a>
-					<a class="btn" href="/rss.xml">RSS</a>
+			<section class="hero" data-glow>
+				<p class="eyebrow" data-reveal style="--rd:120ms">
+					<span data-scramble="700">@{handle}</span>
+					<span class="sep" aria-hidden="true">/</span>
+					<span>个人站</span>
+				</p>
+				<h1 class="name" data-reveal="chars">
+					{
+						[...SITE_TITLE].map(
+							(ch, i) =>
+								<span class="ch" style={`--rd:${180 + i * 70}ms`}>
+									{ch}
+								</span>,
+						)
+					}
+				</h1>
+				<p class="lede" data-mask data-reveal style="--rd:560ms">
+					{SITE_DESCRIPTION}
+				</p>
+				<div class="cta" data-reveal data-stagger style="--rd:720ms">
+					<a class="btn primary" href="/blog/" data-magnetic="7">看文章</a>
+					<a class="btn" href="https://github.com/qwqwgogogo" data-magnetic="7">
+						GitHub
+					</a>
+					<a class="btn" href="/rss.xml" data-magnetic="7">RSS</a>
 				</div>
+				<p class="meta" data-reveal style="--rd:880ms">
+					{projects.length} 个作品 · {posts.length} 篇文章 · 最近更新
+					{' '}
+					<FormattedDate date={posts[0]?.data.pubDate ?? new Date()} />
+				</p>
+				<div class="cue" data-scroll-cue aria-hidden="true"><i></i></div>
 			</section>
 
 			<section class="block">
-				<h2 class="label">作品</h2>
-				<div class="grid">
+				<h2 class="label" data-mask data-reveal>作品</h2>
+				<div class="grid" data-stagger data-stagger-step="110">
 					{
-						projects.map((p) => (
-							<article class="card">
-								<h3>
-									<a href={p.url}>{p.name}</a>
-								</h3>
-								<p>{p.desc}</p>
-								<div class="tags">
-									{p.tags.map((t) => <span>{t}</span>)}
-								</div>
-								{
-									p.secondary && (
-										<a class="demo" href={p.secondary.url}>
-											{p.secondary.label} →
+						projects.map((p, i) => (
+							<div data-reveal>
+								<article class="card" data-spotlight data-tilt="7">
+									<span class="idx">{String(i + 1).padStart(2, '0')}</span>
+									<h3>
+										<a href={p.url} class="sweep">
+											{p.name}
 										</a>
-									)
-								}
-							</article>
+									</h3>
+									<p>{p.desc}</p>
+									<div class="tags">
+										{p.tags.map((t) => <span>{t}</span>)}
+									</div>
+									<div class="foot">
+										{
+											p.secondary && (
+												<a class="demo" href={p.secondary.url}>
+													{p.secondary.label}
+													<i aria-hidden="true">→</i>
+												</a>
+											)
+										}
+										<a class="repo" href={p.url}>
+											仓库<i aria-hidden="true">→</i>
+										</a>
+									</div>
+								</article>
+							</div>
 						))
 					}
 				</div>
 			</section>
 
 			<section class="block">
-				<h2 class="label">最新文章</h2>
-				<ul class="post-list">
+				<h2 class="label" data-mask data-reveal>最新文章</h2>
+				<ul class="post-list" data-stagger>
 					{
-						posts.slice(0, 3).map((post) => (
-							<li>
-								<a href={`/blog/${post.id}/`}>{post.data.title}</a>
-								<FormattedDate date={post.data.pubDate} />
+						posts.slice(0, 4).map((post) => (
+							<li data-reveal>
+								<a href={`/blog/${post.id}/`}>
+									<span class="row-title">{post.data.title}</span>
+									<FormattedDate date={post.data.pubDate} />
+								</a>
 							</li>
 						))
 					}
 				</ul>
-				<p>
-					<a href="/blog/">所有文章 →</a>
+				<p class="more">
+					<a class="sweep" href="/blog/">所有文章 →</a>
 				</p>
 			</section>
 		</main>
@@ -100,101 +142,216 @@ const projects = [
 
 <style>
 	main {
-		width: 1040px;
-		max-width: calc(100% - 2em);
-		padding: 0 1em;
+		width: 1180px;
+		max-width: calc(100% - 2.5em);
+		padding: 0 1.25em;
 	}
+
+	/* ---------- hero ---------- */
 	.hero {
-		padding: 7rem 0 5rem;
+		position: relative;
+		padding: clamp(5rem, 13vh, 9rem) 0 clamp(4rem, 9vh, 6rem);
+		overflow: clip;
+	}
+	.eyebrow {
+		display: flex;
+		align-items: center;
+		gap: 0.6em;
+		margin: 0 0 1.4rem;
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
+		letter-spacing: 0.16em;
+		text-transform: lowercase;
+		color: var(--accent);
+	}
+	.eyebrow .sep {
+		color: rgb(var(--gray));
+	}
+	.eyebrow span:last-child {
+		color: rgb(var(--gray));
 	}
 	.name {
-		font-size: clamp(4rem, 14vw, 9rem);
-		line-height: 0.95;
-		letter-spacing: -0.05em;
 		margin: 0;
-		background: linear-gradient(100deg, #e9edf6 0%, var(--accent) 48%, #67e8f9 100%);
+		font-size: clamp(4.5rem, 17vw, 11rem);
+		line-height: 0.9;
+		letter-spacing: -0.055em;
+	}
+	/* 每个 .ch 是独立的背景裁剪盒，所以渐变必须是纵向的：
+	   字高一致 → 每个字的色带完全对齐，横向渐变会一字一色。 */
+	.name :global(.ch) {
+		background: linear-gradient(
+			175deg,
+			#f4f6fc 0%,
+			#d3dbf2 32%,
+			var(--accent) 62%,
+			#67e8f9 100%
+		);
+		background-size: 100% 230%;
 		-webkit-background-clip: text;
 		background-clip: text;
 		color: transparent;
+		animation: sheen 7.5s var(--e-io) infinite alternate;
+	}
+	@keyframes sheen {
+		from {
+			background-position: 50% 0%;
+		}
+		to {
+			background-position: 50% 100%;
+		}
 	}
 	.lede {
-		font-size: 1.4rem;
+		max-width: 32em;
+		margin: 1.6rem 0 2.6rem;
+		font-size: clamp(1.15rem, 2.2vw, 1.5rem);
+		line-height: 1.55;
 		color: rgb(var(--gray));
-		max-width: 30em;
-		margin: 1.5rem 0 2.5rem;
 	}
 	.cta {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.75rem;
+		gap: 0.7rem;
 	}
 	.btn {
 		display: inline-block;
-		padding: 0.6em 1.4em;
+		padding: 0.62em 1.5em;
 		border: 1px solid var(--border);
 		border-radius: 999px;
 		background: var(--surface);
 		color: rgb(var(--black));
 		font-size: 1rem;
 		text-decoration: none;
-		transition:
-			border-color 0.18s,
-			transform 0.18s;
 	}
 	.btn:hover {
-		border-color: var(--accent);
+		border-color: rgba(165, 180, 252, 50%);
 		color: var(--accent);
-		transform: translateY(-1px);
 	}
 	.btn.primary {
-		background: var(--accent-dark);
+		background: linear-gradient(120deg, var(--accent-dark), #a5b4fc);
 		border-color: transparent;
 		color: #0a0c11;
 		font-weight: 700;
+		box-shadow: 0 10px 30px -12px rgba(129, 140, 248, 60%);
 	}
 	.btn.primary:hover {
 		color: #0a0c11;
-		filter: brightness(1.1);
+		filter: brightness(1.08);
 	}
+	.meta {
+		margin: 2.2rem 0 0;
+		font-family: var(--font-mono);
+		font-size: 0.82rem;
+		letter-spacing: 0.04em;
+		color: rgba(var(--gray), 75%);
+	}
+	.meta :global(time) {
+		color: var(--accent);
+	}
+	.cue {
+		position: absolute;
+		left: 0;
+		bottom: 1.2rem;
+		width: 42px;
+		height: 42px;
+		opacity: 0.7;
+		transition: opacity 0.5s var(--e-out);
+	}
+	.cue.is-gone {
+		opacity: 0;
+	}
+	.cue i {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 1px;
+		height: 42px;
+		background: linear-gradient(
+			to bottom,
+			transparent,
+			var(--accent) 40%,
+			transparent
+		);
+		animation: fall 2.2s var(--e-io) infinite;
+	}
+	@keyframes fall {
+		0% {
+			transform: translateY(-14px);
+			opacity: 0;
+		}
+		35% {
+			opacity: 1;
+		}
+		100% {
+			transform: translateY(22px);
+			opacity: 0;
+		}
+	}
+
+	/* ---------- 区块：左侧标签 + 右侧内容 ---------- */
 	.block {
-		padding: 3rem 0;
+		display: grid;
+		grid-template-columns: 190px minmax(0, 1fr);
+		gap: 2.5rem;
+		align-items: start;
+		padding: 3.2rem 0;
 		border-top: 1px solid var(--border);
 	}
 	.label {
-		font-size: 0.85rem;
-		font-weight: 700;
-		letter-spacing: 0.18em;
-		text-transform: uppercase;
+		position: sticky;
+		top: 6rem;
+		margin: 0;
+		font-family: var(--font-mono);
+		font-size: 0.82rem;
+		font-weight: 400;
+		letter-spacing: 0.16em;
 		color: rgb(var(--gray));
-		margin-bottom: 1.5rem;
+	}
+	.label::before {
+		content: '';
+		display: block;
+		width: 26px;
+		height: 2px;
+		margin-bottom: 0.7rem;
+		background: linear-gradient(90deg, var(--accent), transparent);
 	}
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-		gap: 1rem;
+		grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+		gap: 1.1rem;
 	}
+
+	/* ---------- 卡片 ---------- */
 	.card {
+		position: relative;
 		display: flex;
 		flex-direction: column;
-		padding: 1.4rem;
+		height: 100%;
+		padding: 1.5rem;
 		border: 1px solid var(--border);
-		border-radius: 14px;
-		background: var(--surface);
-		transition:
-			border-color 0.18s,
-			transform 0.18s;
+		border-radius: 16px;
+		background-color: rgba(18, 21, 29, 78%);
+		--lift: 0px;
 	}
 	.card:hover {
-		border-color: rgba(165, 180, 252, 45%);
-		transform: translateY(-2px);
+		--lift: -4px;
+	}
+	.card:hover .idx {
+		color: var(--accent);
+	}
+	.idx {
+		font-family: var(--font-mono);
+		font-size: 0.78rem;
+		letter-spacing: 0.1em;
+		color: rgba(var(--gray), 60%);
+		transition: color 0.4s var(--e-out);
 	}
 	.card h3 {
-		font-size: 1.25rem;
-		margin-bottom: 0.5rem;
+		margin: 0.55rem 0 0.6rem;
+		font-size: 1.2rem;
+		line-height: 1.35;
 	}
 	.card h3 a {
 		color: rgb(var(--black));
-		text-decoration: none;
 	}
 	.card h3 a:hover {
 		color: var(--accent);
@@ -202,8 +359,8 @@ const projects = [
 	.card p {
 		flex: 1;
 		margin: 0 0 1rem;
-		font-size: 0.98rem;
-		line-height: 1.6;
+		font-size: 0.95rem;
+		line-height: 1.65;
 		color: rgb(var(--gray));
 	}
 	.tags {
@@ -212,44 +369,99 @@ const projects = [
 		gap: 0.4rem;
 	}
 	.tags span {
-		padding: 0.15em 0.7em;
+		padding: 0.14em 0.7em;
 		border-radius: 999px;
-		background: rgba(165, 180, 252, 10%);
+		background: rgba(165, 180, 252, 9%);
 		color: var(--accent);
-		font-size: 0.78rem;
+		font-family: var(--font-mono);
+		font-size: 0.74rem;
+		letter-spacing: 0.03em;
 	}
-	.demo {
-		margin-top: 0.9rem;
-		font-size: 0.9rem;
+	.foot {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 1rem;
+		margin-top: 1.1rem;
+		padding-top: 1rem;
+		border-top: 1px dashed rgba(30, 36, 49, 100%);
+		font-size: 0.88rem;
+	}
+	.foot a {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35em;
 		text-decoration: none;
+		color: rgb(var(--gray));
+		transition: color 0.3s var(--e-out);
 	}
+	.foot a:hover {
+		color: var(--accent);
+	}
+	.foot .repo {
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		letter-spacing: 0.06em;
+	}
+	.foot i {
+		font-style: normal;
+		transition: transform 0.4s var(--e-expo);
+	}
+	.foot a:hover i {
+		transform: translateX(4px);
+	}
+
+	/* ---------- 文章行 ---------- */
 	.post-list {
 		list-style: none;
 		margin: 0;
 		padding: 0;
 	}
 	.post-list li {
+		position: relative;
+		border-bottom: 1px solid var(--border);
+	}
+	.post-list a {
 		display: flex;
 		align-items: baseline;
 		justify-content: space-between;
 		gap: 1.5em;
-		padding: 0.7em 0;
-		border-bottom: 1px dashed var(--border);
+		padding: 1rem 0.9rem;
+		border-radius: 10px;
+		font-size: 1.1rem;
+		color: rgb(var(--black));
+		text-decoration: none;
+		transition:
+			background-color 0.4s var(--e-out),
+			padding-left 0.4s var(--e-expo),
+			color 0.3s var(--e-out);
 	}
-	.post-list a {
-		font-size: 1.15rem;
+	.post-list a:hover {
+		background: rgba(165, 180, 252, 6%);
+		padding-left: 1.4rem;
+		color: var(--accent);
 	}
 	.post-list :global(time) {
-		color: rgb(var(--gray));
-		font-size: 0.9rem;
+		font-family: var(--font-mono);
+		font-size: 0.82rem;
+		color: rgba(var(--gray), 80%);
 		white-space: nowrap;
 	}
-	@media (max-width: 720px) {
-		.hero {
-			padding: 4rem 0 3rem;
+	.more {
+		margin: 1.4rem 0 0;
+	}
+
+	@media (max-width: 900px) {
+		.block {
+			grid-template-columns: 1fr;
+			gap: 1.4rem;
+			padding: 2.4rem 0;
 		}
-		.lede {
-			font-size: 1.15rem;
+		.label {
+			position: static;
+		}
+		.cue {
+			display: none;
 		}
 	}
 </style>
