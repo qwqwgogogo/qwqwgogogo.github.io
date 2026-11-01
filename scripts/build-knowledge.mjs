@@ -397,11 +397,7 @@ function scoreSentence(x) {
 	return score + Math.max(0, 1 - Math.abs(len - 44) / 76);
 }
 
-function glossFor(label) {
-	// 有笔记把这个词声明成考点，就只从那些笔记里挑句子。
-	// 否则文章里「顺带提到这个词」的那句会抢走解释：我写过一句「移码这批词全空着」，它就差点变成移码的定义。
-	const owners = pools.filter(({ doc }) => doc.declared.includes(label));
-	const pool = owners.length ? owners : pools;
+function pickFrom(pool, label) {
 	let best = null;
 	for (const { doc, sentences } of pool) {
 		if (!hasTerm(doc.plain, label)) continue;
@@ -412,6 +408,16 @@ function glossFor(label) {
 			if (!best || score > best.score) best = { score, text: x, slug: doc.slug, title: doc.title, kind: doc.kind };
 		}
 	}
+	return best;
+}
+
+function glossFor(label) {
+	// 有笔记把这个词声明成考点，就只从那些笔记里挑句子。
+	// 否则文章里「顺带提到这个词」的那句会抢走解释：我写过一句「移码这批词全空着」，它就差点变成移码的定义。
+	const owners = pools.filter(({ doc }) => doc.declared.includes(label));
+	// 声明了它却没在正文里留下一句可挑的话（只写进表格），就退回全库找：
+	// 面板上有一句带出处的真话，好过空着——出处照样指回那句原话所在的笔记。
+	const best = (owners.length ? pickFrom(owners, label) : null) ?? pickFrom(pools, label);
 	return best && { text: best.text, slug: best.slug, title: best.title, kind: best.kind };
 }
 
