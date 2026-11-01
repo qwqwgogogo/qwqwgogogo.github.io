@@ -6,50 +6,13 @@ import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { primaryUrl, projects, shortName, titleUrl } from '../data/projects';
 
 const posts = (await getCollection('blog')).sort(
 	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
 );
 
-type Project = {
-	name: string;
-	desc: string;
-	tags: string;
-	year: string;
-	url?: string;
-	secondary?: { label: string; url: string };
-};
-
-const projects: Project[] = [
-	{
-		// 源码仓库已转私有，只挂公开的演示站；url 留空则不渲染「仓库」和标题链接
-		name: '小豚 · 武汉 SPU 城市 AI 接待员',
-		desc: '纯静态、离线可用、句句有出处的城市 AI 接待员。SAIG 数命 SPU 国际 AI 大赛参赛作品。',
-		tags: 'TypeScript · 静态站',
-		year: '2026',
-		secondary: { label: '在线演示', url: 'https://xiaotun-wuhan-fy73vgwpmp3.qoder.zone' },
-	},
-	{
-		name: 'Ollama Model Manager',
-		desc: 'Windows 桌面应用：实时显示 GPU / CPU 显存占用，加载模型前先预估资源影响，并按硬件推荐最合适的模型。已打 Windows 可执行文件发 Release。',
-		tags: 'Python · 桌面应用',
-		year: '2026',
-		url: 'https://github.com/qwqwgogogo/Ollama-Model-Manager',
-		secondary: { label: '下载 exe', url: 'https://github.com/qwqwgogogo/Ollama-Model-Manager/releases/latest' },
-	},
-	{
-		name: 'SWEF-AT',
-		desc: '稳定性加权的集成特征过滤方法：融合六个异构过滤器打分，再用自适应拐点自动确定保留特征数。配套的论文最后没投出去，仓库里留下的是实验代码和结果数据。',
-		tags: 'Python · 研究复现',
-		year: '2025',
-		url: 'https://github.com/qwqwgogogo/SWEF-AT',
-	},
-];
-
 const handle = 'qwqwgogogo';
-const shortName = (p: Project) => p.name.split(' · ')[0];
-const primaryUrl = (p: Project) => p.secondary?.url ?? p.url;
-const titleUrl = (p: Project) => p.url ?? p.secondary?.url;
 ---
 
 <!doctype html>

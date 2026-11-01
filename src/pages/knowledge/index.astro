@@ -1,0 +1,480 @@
+---
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import Ambient from '../../components/Ambient.astro';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_TITLE } from '../../consts';
+
+type Node = {
+	id: number;
+	label: string;
+	kind: 'concept' | 'project';
+	count: number;
+	posts: string[];
+	projects: string[];
+	url?: string | null;
+	x: number;
+	y: number;
+	z: number;
+};
+
+const graph = JSON.parse(
+	readFileSync(join(process.cwd(), 'src/data/knowledge.json'), 'utf8'),
+) as {
+	generatedAt: string;
+	posts: { slug: string; title: string }[];
+	nodes: Node[];
+	edges: { a: number; b: number; weight: number }[];
+};
+
+const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+const titleOf = new Map(graph.posts.map((p) => [p.slug, p.title]));
+const degree = new Map<number, number>();
+graph.edges.forEach((e) => {
+	degree.set(e.a, (degree.get(e.a) ?? 0) + e.weight);
+	degree.set(e.b, (degree.get(e.b) ?? 0) + e.weight);
+});
+const deg = (n: Node) => degree.get(n.id) ?? 0;
+const neighbors = (id: number) =>
+	[...new Set(graph.edges.filter((e) => e.a === id || e.b === id).map((e) => (e.a === id ? e.b : e.a)))];
+
+// 降级用的平面图：构建时把同一批球面坐标做一次固定角度的正交投影，
+// 所以没有 WebGL 的机器看到的结构和能跑的机器是同一张图，不是另画一张。
+const YAW = -0.55;
+const PITCH = 0.34;
+const project = (n: Node) => {
+	const cy = Math.cos(YAW);
+	const sy = Math.sin(YAW);
+	const cp = Math.cos(PITCH);
+	const sp = Math.sin(PITCH);
+	const x1 = n.x * cy + n.z * sy;
+	const z1 = -n.x * sy + n.z * cy;
+	const y2 = n.y * cp - z1 * sp;
+	return { sx: +(x1 + 130).toFixed(1), sy: +(-y2 + 130).toFixed(1), depth: n.y * sp + z1 * cp };
+};
+const pts = new Map(graph.nodes.map((n) => [n.id, project(n)]));
+const W = 260;
+const hubs = [...graph.nodes]
+	.sort((a, b) => deg(b) - deg(a))
+	.slice(0, 14)
+	.map((n) => n.id);
+const selected = graph.nodes.reduce((a, b) => (deg(b) > deg(a) ? b : a));
+
+const concepts = graph.nodes
+	.filter((n) => n.kind === 'concept')
+	.sort((a, b) => deg(b) - deg(a) || b.count - a.count);
+const projectNodes = graph.nodes.filter((n) => n.kind === 'project');
+---
+
+<html lang="zh-CN">
+	<head>
+		<BaseHead
+			title="知识库"
+			description="把站点里已发布的文章和项目连成一张概念图：术语、关系和出现位置都由构建脚本从正文里抽出来。"
+		/>
+		<style>
+			main {
+				width: 1040px;
+				max-width: calc(100% - 2em);
+				margin: auto;
+				padding: 0 1em 4em;
+			}
+			.title {
+				padding: clamp(2.5rem, 8vh, 4.5rem) 0 0.9em;
+			}
+			.title h1 {
+				margin: 0 0 0.4em;
+				font-family: var(--font-serif-cjk);
+				font-size: clamp(1.85rem, 4.4vw, 2.7rem);
+				letter-spacing: -0.012em;
+			}
+			.kicker {
+				margin: 0 0 0.9em;
+				font-family: var(--font-mono);
+				font-size: 0.78rem;
+				letter-spacing: 0.08em;
+				color: var(--accent);
+			}
+			.lede {
+				max-width: 60ch;
+				margin: 0;
+				color: rgb(var(--gray));
+			}
+			.rule {
+				border: none;
+				height: 1px;
+				margin: 2.4em 0 0;
+				background: var(--rule);
+			}
+			.stage {
+				position: relative;
+				height: clamp(360px, 58vh, 620px);
+				margin: 1.6em 0 0;
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				background:
+					radial-gradient(120% 90% at 50% 0%, #fffdf8 0%, var(--bg) 62%, var(--bg-deep) 100%);
+				overflow: hidden;
+			}
+			.stage :global(.kb-gl) {
+				position: absolute;
+				inset: 0;
+				width: 100%;
+				height: 100%;
+				display: block;
+				/* pan-y：手机上竖着划还是滚页面，横着划才转图，不然整页划不动 */
+				touch-action: pan-y;
+				cursor: grab;
+			}
+			.stage :global(.kb-gl:active) {
+				cursor: grabbing;
+			}
+			.flat {
+				position: absolute;
+				inset: 0;
+				width: 100%;
+				height: 100%;
+			}
+			/* WebGL 起来之后才把平面图收起来，两条路不会同时出现在无障碍树里 */
+			.stage.is-3d .flat {
+				display: none;
+			}
+			.flat .edge {
+				stroke: rgba(23, 22, 26, 0.16);
+			}
+			.flat .edge.strong {
+				stroke: rgba(23, 22, 26, 0.4);
+			}
+			.flat .node {
+				fill: rgb(var(--black));
+			}
+			.flat .node.project {
+				fill: var(--accent);
+			}
+			.flat .tag {
+				font-family: var(--font-mono);
+				font-size: 7px;
+				fill: rgba(23, 22, 26, 0.72);
+			}
+			.legend {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 1.2rem;
+				align-items: center;
+				margin: 0.9em 0 0;
+				font-size: 0.85rem;
+				color: rgb(var(--gray));
+			}
+			.legend i {
+				display: inline-block;
+				width: 9px;
+				height: 9px;
+				border-radius: 50%;
+				margin-right: 0.45em;
+				background: rgb(var(--black));
+				vertical-align: middle;
+			}
+			.legend i.p {
+				background: var(--accent);
+			}
+			.hint {
+				position: absolute;
+				right: 14px;
+				bottom: 12px;
+				padding: 0.25em 0.7em;
+				border-radius: 999px;
+				background: rgba(246, 243, 236, 0.86);
+				font-size: 0.75rem;
+				color: rgb(var(--gray));
+				pointer-events: none;
+			}
+			.hint .touch {
+				display: none;
+			}
+			@media (hover: none), (pointer: coarse) {
+				.hint .pointer {
+					display: none;
+				}
+				.hint .touch {
+					display: inline;
+				}
+			}
+			.split {
+				display: grid;
+				grid-template-columns: minmax(0, 1fr) 300px;
+				gap: 1.6rem;
+				margin-top: 2.2em;
+				align-items: start;
+			}
+			@media (max-width: 860px) {
+				.split {
+					grid-template-columns: 1fr;
+				}
+			}
+			h2 {
+				margin: 0 0 0.9em;
+				font-family: var(--font-serif-cjk);
+				font-size: 1.25rem;
+			}
+			.detail {
+				position: sticky;
+				top: 92px;
+				padding: 1.2em 1.3em;
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				background: #fffdf8;
+				font-size: 0.95rem;
+			}
+			/* 说明面板每次选中都由脚本重建，拿不到 scoped 样式的作用域属性，所以写成子选择器 */
+			.detail :global(.kind) {
+				margin: 0;
+				font-family: var(--font-mono);
+				font-size: 0.72rem;
+				letter-spacing: 0.1em;
+				text-transform: uppercase;
+				color: var(--accent);
+			}
+			.detail :global(.name) {
+				margin: 0.2em 0 0.5em;
+				font-family: var(--font-serif-cjk);
+				font-size: 1.5rem;
+				line-height: 1.2;
+				word-break: break-word;
+			}
+			.detail :global(.meta) {
+				margin: 0 0 0.9em;
+				font-size: 0.85rem;
+				color: rgb(var(--gray));
+			}
+			.detail :global(.related-label) {
+				margin: 1.1em 0 0.5em;
+				font-size: 0.8rem;
+				letter-spacing: 0.02em;
+				color: rgb(var(--gray));
+			}
+			.detail :global(ul) {
+				margin: 0;
+				padding-left: 1.1em;
+				font-size: 0.92rem;
+				line-height: 1.6;
+			}
+			.detail :global(li) {
+				margin-bottom: 0.3em;
+			}
+			.detail :global(li::marker) {
+				color: var(--accent);
+			}
+			.detail :global(ul.chips) {
+				padding-left: 0;
+			}
+			.detail :global(ul.chips li) {
+				margin: 0;
+			}
+			.detail :global(a) {
+				text-decoration: none;
+				border-bottom: 1px solid rgba(191, 63, 38, 0.45);
+			}
+			.kb :global(.chips) {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.4rem;
+				margin: 0;
+				padding: 0;
+				list-style: none;
+			}
+			/* 图谱选中后脚本会重建一批同款按钮，它们没有作用域属性，所以走 global */
+			.kb :global(.chips button) {
+				font: inherit;
+				font-size: 0.84rem;
+				padding: 0.2em 0.62em;
+				border: 1px solid var(--border);
+				border-radius: 999px;
+				background: transparent;
+				color: rgb(38 36 33);
+				cursor: pointer;
+				transition:
+					background-color 0.25s var(--e-out),
+					border-color 0.25s var(--e-out),
+					color 0.25s var(--e-out);
+			}
+			.kb :global(.chips button:hover) {
+				border-color: var(--accent);
+				color: var(--accent-dark);
+			}
+			.kb :global(.chips button[aria-current='true']) {
+				background: var(--accent);
+				border-color: var(--accent);
+				color: #fffdf8;
+			}
+			.column h3 {
+				margin: 1.8em 0 0.7em;
+				font-family: var(--font-serif-cjk);
+				font-size: 1rem;
+				color: rgb(var(--gray));
+			}
+			.how {
+				margin-top: 3em;
+				padding-top: 1.6em;
+				border-top: 1px solid var(--rule);
+				color: rgb(var(--gray));
+				font-size: 0.95rem;
+			}
+			.how h2 {
+				color: rgb(var(--black));
+			}
+			.how code {
+				font-size: 0.85em;
+			}
+			.stage :global(.notice) {
+				position: absolute;
+				left: 14px;
+				bottom: 12px;
+				margin: 0;
+				font-size: 0.75rem;
+				color: rgb(var(--gray));
+			}
+		</style>
+	</head>
+
+	<body>
+		<Ambient />
+		<Header />
+		<main class="kb">
+			<div class="title">
+				<p class="kicker" data-reveal style="--rd:60ms">
+					{graph.nodes.length} 个术语 · {graph.edges.length} 条关系
+				</p>
+				<h1 data-mask data-reveal style="--rd:140ms">知识库</h1>
+				<p class="lede" data-reveal style="--rd:260ms">
+					这张图不是手画的。构建脚本扫过每一篇已发布的文章和首页的项目条目，把反复出现的技术术语抽成节点，
+					再把「同一篇文章里一起出现过」连成边——所以它反映的是我实际写下来的东西，不是我打算学什么。
+				</p>
+				<hr class="rule" data-reveal="grow" style="--rd:340ms" />
+			</div>
+
+			<div class="stage" data-stage>
+				<svg class="flat" viewBox={`0 0 ${W} ${W}`} preserveAspectRatio="xMidYMid meet" role="img">
+					<title>概念图的平面版本（按构建时算好的坐标绘制）</title>
+					{
+						graph.edges.map((e) => {
+							const a = pts.get(e.a)!;
+							const b = pts.get(e.b)!;
+							return (
+								<line
+									class={`edge${e.weight >= 2 ? ' strong' : ''}`}
+									stroke-width={e.weight >= 2 ? 1.1 : 0.5}
+									x1={a.sx}
+									y1={a.sy}
+									x2={b.sx}
+									y2={b.sy}
+								/>
+							);
+						})
+					}
+					{
+						graph.nodes.map((n) => {
+							const p = pts.get(n.id)!;
+							return (
+								<g data-node-id={n.id}>
+									<circle
+										class={`node${n.kind === 'project' ? ' project' : ''}`}
+										cx={p.sx}
+										cy={p.sy}
+										r={(1.6 + Math.min(deg(n), 14) * 0.22).toFixed(2)}
+									/>
+									{hubs.includes(n.id) && (
+										<text class="tag" x={p.sx + 4} y={p.sy - 3}>
+											{n.label}
+										</text>
+									)}
+								</g>
+							);
+						})
+					}
+				</svg>
+				<p class="hint">
+					<span class="pointer">拖动旋转 · 滚轮缩放 · </span><span class="touch">单指横拖旋转 · 双指缩放 · </span>点一个词看它连着什么
+				</p>
+			</div>
+
+			<div class="legend" data-reveal>
+				<span><i></i>文章里的概念</span>
+				<span><i class="p"></i>项目</span>
+				<span>点越大 = 连得越多 · 线越粗 = 在同几篇里反复共现</span>
+			</div>
+
+			<div class="split">
+				<div class="column">
+					<h2>概念</h2>
+					<ul class="chips" data-chips>
+						{
+							concepts.map((n) => (
+								<li>
+									<button type="button" data-node-id={n.id} aria-current={n.id === selected.id}>
+										{n.label}
+									</button>
+								</li>
+							))
+						}
+					</ul>
+					<h3>项目</h3>
+					<ul class="chips" data-chips>
+						{
+							projectNodes.map((n) => (
+								<li>
+									<button type="button" data-node-id={n.id} aria-current={n.id === selected.id}>
+										{n.label}
+									</button>
+								</li>
+							))
+						}
+					</ul>
+					<div class="how">
+						<h2>这张图是怎么来的</h2>
+						<p>
+							生成脚本是仓库里的 <code>scripts/build-knowledge.mjs</code>，每次 <code>npm run build</code> 先跑它。
+							术语只从已经发布的文字里取，脚本不内置任何词表：全大写缩写、多个大写的名字、出现在反引号里的标识符、
+							带版本号或点划线的写法才算术语，全站只提一次的普通词扔掉（全大写缩写和首页标签除外）。
+						</p>
+						<p>
+							坐标用斐波那契球面均布，构建时算死，前端不做力导向布局——所以刷新不会跳位，代价是位置本身没有含义，
+							它只是把点摊开。想改图就改规则重跑，别手改 <code>src/data/knowledge.json</code>。
+						</p>
+						<p>生成于 {graph.generatedAt}，共 {graph.posts.length} 篇文章、{graph.nodes.length} 个节点。</p>
+					</div>
+				</div>
+
+				<aside class="detail" data-detail aria-live="polite">
+					<p class="kind">{selected.kind === 'project' ? '项目' : '概念'}</p>
+					<p class="name">{selected.label}</p>
+					<p class="meta">
+						{
+							selected.kind === 'project'
+								? '首页挂着的项目条目'
+								: `全站提到 ${selected.count} 次 · 连着 ${neighbors(selected.id).length} 个词`
+						}
+					</p>
+					{
+						selected.posts.length > 0 && (
+							<ul>
+								{selected.posts.map((slug) => (
+									<li>
+										<a href={`/blog/${slug}/`}>{titleOf.get(slug) ?? slug}</a>
+									</li>
+								))}
+							</ul>
+						)
+					}
+					{
+						selected.kind === 'project' &&
+							selected.url && <a href={selected.url} target="_blank" rel="noreferrer">仓库 / 演示 ↗</a>
+					}
+				</aside>
+			</div>
+		</main>
+		<Footer />
+		<script>import '../../scripts/knowledge';</script>
+	</body>
+</html>
