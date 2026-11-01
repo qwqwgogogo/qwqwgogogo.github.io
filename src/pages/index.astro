@@ -11,14 +11,22 @@ const posts = (await getCollection('blog')).sort(
 	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
 );
 
-const projects = [
+type Project = {
+	name: string;
+	desc: string;
+	tags: string;
+	year: string;
+	url?: string;
+	secondary?: { label: string; url: string };
+};
+
+const projects: Project[] = [
 	{
+		// 源码与演示都已转私有，这里不放死链：url / secondary 留空即不渲染链接
 		name: '小豚 · 武汉 SPU 城市 AI 接待员',
 		desc: '纯静态、离线可用、句句有出处的城市 AI 接待员。SAIG 数命 SPU 国际 AI 大赛参赛作品。',
 		tags: 'TypeScript · 静态站',
 		year: '2026',
-		url: 'https://github.com/qwqwgogogo/xiaotun-wuhan-src',
-		secondary: { label: '在线演示', url: 'https://qwqwgogogo.github.io/xiaotun-wuhan/' },
 	},
 	{
 		name: 'Ollama Model Manager',
@@ -38,7 +46,8 @@ const projects = [
 ];
 
 const handle = 'qwqwgogogo';
-const [first, ...rest] = projects;
+const shortName = (p: Project) => p.name.split(' · ')[0];
+const primaryUrl = (p: Project) => p.secondary?.url ?? p.url;
 ---
 
 <!doctype html>
@@ -60,9 +69,19 @@ const [first, ...rest] = projects;
 					{SITE_DESCRIPTION}
 				</h1>
 				<p class="now" data-reveal style="--rd:420ms">
-					手上三个项目：<a class="sweep" href={first.secondary?.url ?? first.url}>{first.name.split(' · ')[0]}</a>、<a
-						class="sweep"
-						href={rest[0].url}>{rest[0].name}</a> 和 <a class="sweep" href={rest[1].url}>{rest[1].name}</a>；不定期写的笔记都在<a
+					手上三个项目：
+					{
+						projects.map((p, i) => (
+							<>
+								{i > 0 && (i === projects.length - 1 ? ' 和 ' : '、')}
+								{primaryUrl(p) ? (
+									<a class="sweep" href={primaryUrl(p)}>{shortName(p)}</a>
+								) : (
+									<span>{shortName(p)}</span>
+								)}
+							</>
+						))
+					}；不定期写的笔记都在<a
 						class="sweep"
 						href="/blog/">文章</a>里。
 				</p>
@@ -82,14 +101,14 @@ const [first, ...rest] = projects;
 								<span class="n">{String(i + 1).padStart(2, '0')}</span>
 								<div class="body">
 									<h3>
-										<a href={p.url}>{p.name}</a>
+										{p.url ? <a href={p.url}>{p.name}</a> : <span>{p.name}</span>}
 									</h3>
 									<p>{p.desc}</p>
 									<span class="tags">{p.tags}</span>
 								</div>
 								<div class="side">
 									{p.secondary && <a href={p.secondary.url}>{p.secondary.label}</a>}
-									<a href={p.url}>仓库</a>
+									{p.url && <a href={p.url}>仓库</a>}
 									<span class="yr">{p.year}</span>
 								</div>
 							</li>
