@@ -1,4 +1,6 @@
 ---
+import { CONTACT_EMAIL } from '../consts';
+
 const today = new Date();
 ---
 
@@ -6,6 +8,7 @@ const today = new Date();
 	<div class="inner">
 		<p class="sign">&copy; {today.getFullYear()} qwqw</p>
 		<div class="links">
+			<a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
 			<a href="/rss.xml">RSS</a>
 			<a href="https://github.com/qwqwgogogo">GitHub</a>
 		</div>

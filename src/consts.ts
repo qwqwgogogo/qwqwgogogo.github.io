@@ -3,3 +3,4 @@
 
 export const SITE_TITLE = 'qwqw';
 export const SITE_DESCRIPTION = '记录学习、项目和一些胡思乱想。';
+export const CONTACT_EMAIL = '1574862281@qq.com';
