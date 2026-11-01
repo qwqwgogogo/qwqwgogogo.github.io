@@ -158,6 +158,7 @@ function keep(token) {
 	if (STOP.has(lower)) return false;
 	if (token.includes('/') || token.includes('\\')) return false; // 路径和 URL 残渣不是概念
 	if (/^[a-z][+*^-]\d+$/.test(token)) return false; // 反引号里的算式（ack=x+1 里的 x+1）不是术语
+	if (/^[x]\d+$/.test(token)) return false; // 0x100 被切剩的 x100 不是术语
 	const uppers = (token.match(/[A-Z]/g) ?? []).length;
 	const acronym = uppers === token.length && token.length >= 3; // MCP GAP OOM DiT
 	// 只提一次就够的条件：全大写缩写（作者自己选的术语）和首页项目条目里的标签（他自己写的）
