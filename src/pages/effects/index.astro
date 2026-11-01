@@ -1,0 +1,1179 @@
+---
+import Ambient from '../../components/Ambient.astro';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_TITLE } from '../../consts';
+
+type Status = 'used' | 'none' | 'avoid';
+
+type Effect = {
+	id: string;
+	en: string;
+	cn: string;
+	how: string;
+	status: Status;
+	where: string;
+	slot: 'text' | 'rule' | 'box' | 'chips' | 'img' | 'none';
+};
+
+// 名字按族分：进场 / 指针 / 滚动 / 材质 / 过渡。status=used 的都在这个站上跑着，能当场看到。
+const groups: { name: string; note: string; items: Effect[] }[] = [
+	{
+		name: '进场与揭示',
+		note: '元素从「不在」变成「在」的那一下。全部只动 transform / opacity / clip-path。',
+		items: [
+			{
+				id: 'fade-up',
+				en: 'Fade-up reveal',
+				cn: '淡入上移',
+				how: 'opacity 0→1 配 translate3d(0, 12px, 0)→0，IntersectionObserver 进场时加一个 class。',
+				status: 'used',
+				where: '全站 [data-reveal]',
+				slot: 'text',
+			},
+			{
+				id: 'line-mask',
+				en: 'Line-mask reveal',
+				cn: '行遮罩揭示',
+				how: 'clip-path: inset(0 0 calc(100% - 2px) 0) 把文字压成一条缝，进场时展开；文字本体同时 translateY(92%) 顶上来。',
+				status: 'used',
+				where: '每页大标题 [data-mask]',
+				slot: 'text',
+			},
+			{
+				id: 'stagger',
+				en: 'Stagger',
+				cn: '错峰排队',
+				how: '同一批元素各配一点 --rd 延时，进场有先后。脚本会按容器 [data-stagger-step] 自动算。',
+				status: 'used',
+				where: '列表容器 [data-stagger]',
+				slot: 'chips',
+			},
+			{
+				id: 'rule-wipe',
+				en: 'Rule wipe / line grow',
+				cn: '横线生长',
+				how: '一条 1px 的线 scaleX(0)→scaleX(1)，transform-origin 在左。比 fade 有力，成本一样。',
+				status: 'used',
+				where: '标题下的分隔线 [data-reveal="grow"]',
+				slot: 'rule',
+			},
+			{
+				id: 'scramble',
+				en: 'Scramble / decode text',
+				cn: '乱码解码',
+				how: '先把文本换成随机字符，逐位换回真字。必须留一份原文，否则重播会拿乱码当原文。',
+				status: 'used',
+				where: '首页小标签 [data-scramble]',
+				slot: 'text',
+			},
+			{
+				id: 'slide-in',
+				en: 'Slide-in',
+				cn: '侧向推入',
+				how: 'translateX(-14px)→0 配淡入。适合成块的行，不适合正文。',
+				status: 'none',
+				where: '未使用',
+				slot: 'text',
+			},
+		],
+	},
+	{
+		name: '指针与悬停',
+		note: '鼠标（或手指）本身就是输入信号。手机上大多要另找替代，别把关键信息只挂在 hover 上。',
+		items: [
+			{
+				id: 'underline-sweep',
+				en: 'Underline sweep',
+				cn: '下划线扫出',
+				how: 'background-image 一条 1px 实色，background-size 0%→100%，比 text-decoration 的过渡可控。',
+				status: 'used',
+				where: '全站链接、文章列表标题',
+				slot: 'text',
+			},
+			{
+				id: 'row-spotlight',
+				en: 'Pointer-tracked tint',
+				cn: '行级暖晕',
+				how: '把指针坐标写进 --mx/--my，背景用 radial-gradient 落在这一行。一个 rAF 闸门，事件只记录不重排。',
+				status: 'used',
+				where: '列表行 [data-spotlight]',
+				slot: 'box',
+			},
+			{
+				id: 'hover-lift',
+				en: 'Hover lift',
+				cn: '悬浮抬起',
+				how: 'translateY(-2px) + 一层收得很紧的阴影。抬得太高就变成卡片在跳。',
+				status: 'used',
+				where: '学习笔记页的卡片',
+				slot: 'box',
+			},
+			{
+				id: 'magnetic',
+				en: 'Magnetic button',
+				cn: '磁吸按钮',
+				how: '按钮朝指针方向偏移几个像素，需要 JS 跟指针，松开回弹。',
+				status: 'none',
+				where: '未使用（手机上没有对应输入）',
+				slot: 'box',
+			},
+			{
+				id: 'glow-border',
+				en: 'Glow border / gradient text',
+				cn: '霓虹描边、渐变字',
+				how: 'box-shadow 发光 + background-clip: text 的渐变字。',
+				status: 'avoid',
+				where: '不做：和纸墨底子冲突，而且屏幕上一脏就救不回来',
+				slot: 'box',
+			},
+		],
+	},
+	{
+		name: '滚动驱动',
+		note: '滚动是免费信号：不用监听就能拿到进度和进出场。',
+		items: [
+			{
+				id: 'scroll-progress',
+				en: 'Scroll progress bar',
+				cn: '滚动进度条',
+				how: '页面滚动比例写进 --scroll，一条线 scaleX 跟着长。本站还有一条 @supports 的纯 CSS 版本。',
+				status: 'used',
+				where: '页眉底部（现在滚动就能看到它在长）',
+				slot: 'rule',
+			},
+			{
+				id: 'scroll-timeline',
+				en: 'Scroll-driven animation',
+				cn: 'CSS 滚动时间线',
+				how: 'animation-timeline: scroll() / view()，不用 JS 就能把动画绑在滚动位置上。目前只有 Chromium 系稳。',
+				status: 'used',
+				where: '@supports (animation-timeline: scroll()) 里的分支',
+				slot: 'rule',
+			},
+			{
+				id: 'parallax',
+				en: 'Parallax drift',
+				cn: '视差位移',
+				how: '按滚动距离乘一个系数（本站 0.1 上下）写进 --py。系数一大就晕。',
+				status: 'used',
+				where: '[data-parallax]',
+				slot: 'box',
+			},
+			{
+				id: 'sticky-col',
+				en: 'Sticky column',
+				cn: '粘性侧栏',
+				how: 'position: sticky 让一侧跟着滚。要注意顶边距得给页眉让位，不然被压住。',
+				status: 'used',
+				where: '知识库页的说明面板',
+				slot: 'box',
+			},
+			{
+				id: 'ken-burns',
+				en: 'Ken Burns',
+				cn: '图像慢推拉',
+				how: '一张图长时间缓慢 scale + 位移，纪录片常用的那股呼吸感。',
+				status: 'none',
+				where: '未使用（本站还没什么大图）',
+				slot: 'img',
+			},
+			{
+				id: 'marquee',
+				en: 'Marquee / ticker',
+				cn: '跑马灯',
+				how: '两份内容首尾相接横向平移，循环点必须正好是一份宽度，否则跳帧。',
+				status: 'none',
+				where: '未使用（信息密度低，看着着急）',
+				slot: 'chips',
+			},
+		],
+	},
+	{
+		name: '材质与背景',
+		note: '不参与交互，只决定「这块屏是什么做的」。',
+		items: [
+			{
+				id: 'grain',
+				en: 'Grain / noise overlay',
+				cn: '颗粒噪点',
+				how: 'SVG feTurbulence 生成一张噪点图，铺在最上层，opacity 压到几个百分点。给纯色底加一点纸感。',
+				status: 'used',
+				where: '全站背景层',
+				slot: 'none',
+			},
+			{
+				id: 'ambient-orbs',
+				en: 'Ambient orbs',
+				cn: '背景浮光',
+				how: '两团很淡的色斑各跑一条缓慢的 keyframes 路径，透明度不到 10%。',
+				status: 'used',
+				where: 'Ambient 组件（淡黄/淡红，几乎看不出来那种）',
+				slot: 'none',
+			},
+			{
+				id: 'glass',
+				en: 'Glassmorphism',
+				cn: '毛玻璃',
+				how: 'backdrop-filter: blur() + 半透明底色。只有它后面真的有东西滚动时才成立，否则就是块模糊的灰。',
+				status: 'used',
+				where: '页眉（内容从底下滚过去那一下）',
+				slot: 'box',
+			},
+			{
+				id: 'duotone',
+				en: 'Duotone',
+				cn: '双色叠印',
+				how: '图片压成两个色阶，靠 CSS filter 或 SVG 滤镜。',
+				status: 'none',
+				where: '未使用',
+				slot: 'img',
+			},
+			{
+				id: 'paper-ink',
+				en: 'Paper & ink tokens',
+				cn: '纸墨配色系统',
+				how: '一套 CSS 自定义属性定死底色、墨色、强调色、边框和灰阶，所有组件只引用变量。',
+				status: 'used',
+				where: '--bg / --black / --accent / --border / --gray',
+				slot: 'chips',
+			},
+		],
+	},
+	{
+		name: '过渡与状态',
+		note: '页面之间、数据到没到手之间的那段过程。这类最容易「做了但没人看见」。',
+		items: [
+			{
+				id: 'view-transition',
+				en: 'View transitions',
+				cn: '页间过渡',
+				how: 'astro:transition-name 上的新旧各一段 keyframes：旧的淡出上移，新的从下往下展开 clip-path。不换整页白闪。',
+				status: 'used',
+				where: '全站页间过渡（点导航试试）',
+				slot: 'text',
+			},
+			{
+				id: 'skeleton',
+				en: 'Skeleton shimmer',
+				cn: '骨架屏微光',
+				how: '占位灰块上一条来回扫的高光。比转圈的 loader 更接近最终版式。',
+				status: 'none',
+				where: '未使用（静态站没有等待中的请求）',
+				slot: 'box',
+			},
+			{
+				id: 'blur-up',
+				en: 'Blur-up / LQIP',
+				cn: '模糊上采样',
+				how: '先放一张极小的图放大糊住，真图下来后交叉淡入换掉。',
+				status: 'none',
+				where: '未使用（图片很少，不值得）',
+				slot: 'img',
+			},
+			{
+				id: 'flip',
+				en: 'FLIP',
+				cn: '位置反转动画',
+				how: '先量第一帧位置，改完 DOM 量最后一帧，用 transform 把差值反向再平滑归零——只有布局属性做不了的动画才需要它。',
+				status: 'none',
+				where: '未使用（这套基座的规矩就是只动 transform/opacity）',
+				slot: 'box',
+			},
+			{
+				id: 'bento',
+				en: 'Bento grid',
+				cn: '便当格布局',
+				how: '大小不一的格子拼成一块，靠 grid 的 span 而不是 flex 硬凑。',
+				status: 'none',
+				where: '未使用',
+				slot: 'box',
+			},
+			{
+				id: 'reduced-motion',
+				en: 'Reduced-motion fallback',
+				cn: '关动效时的退路',
+				how: 'prefers-reduced-motion: reduce 下所有动效直接落到终态，不做「慢一点的版本」。',
+				status: 'used',
+				where: 'motion.css / motion.ts 两处都判',
+				slot: 'text',
+			},
+		],
+	},
+];
+
+const flat = groups.flatMap((g) => g.items);
+const usedCount = flat.filter((e) => e.status === 'used').length;
+const STATUS: Record<Status, string> = { used: '本站在用', none: '没做', avoid: '不做' };
+// 这几个是循环动画，不用悬停；其余的演示都靠悬停重播
+const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skeleton', 'blur-up']);
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<BaseHead
+			title={`效果图鉴 · ${SITE_TITLE}`}
+			description="前端常见效果的名称对照表：每条给出名字、实现机制、以及这个站上到底用没用。"
+		/>
+		<style>
+			main {
+				width: 1040px;
+				max-width: calc(100% - 2em);
+				margin: auto;
+				padding: 0 1em 4em;
+			}
+			.title {
+				padding: clamp(2.5rem, 8vh, 4.5rem) 0 0.9em;
+			}
+			.title h1 {
+				margin: 0 0 0.4em;
+				font-family: var(--font-serif-cjk);
+				font-size: clamp(1.85rem, 4.4vw, 2.7rem);
+				letter-spacing: -0.012em;
+			}
+			.kicker {
+				margin: 0 0 0.9em;
+				font-family: var(--font-mono);
+				font-size: 0.78rem;
+				letter-spacing: 0.08em;
+				color: var(--accent);
+			}
+			.lede {
+				max-width: 62ch;
+				margin: 0;
+				color: rgb(var(--gray));
+			}
+			.rule {
+				border: none;
+				height: 1px;
+				margin: 2.4em 0 0;
+				background: var(--rule);
+			}
+			.legend {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 1.1rem;
+				margin: 1.2em 0 0;
+				font-size: 0.82rem;
+				color: rgb(var(--gray));
+			}
+			.legend b {
+				font-family: var(--font-mono);
+				font-weight: 400;
+			}
+			.legend .used {
+				color: var(--accent);
+			}
+			.group {
+				margin-top: 3.2em;
+			}
+			.group > h2 {
+				margin: 0 0 0.3em;
+				font-family: var(--font-serif-cjk);
+				font-size: 1.3rem;
+			}
+			.group > .note {
+				margin: 0 0 1.4em;
+				font-size: 0.88rem;
+				color: rgb(var(--gray));
+			}
+			.grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+				gap: 1.1rem;
+			}
+			.card {
+				display: flex;
+				flex-direction: column;
+				padding: 1.05rem 1.15rem 1.15rem;
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				background: #fffdf8;
+			}
+			.card h3 {
+				margin: 0;
+				font-size: 0.98rem;
+				line-height: 1.35;
+			}
+			.card h3 span {
+				display: block;
+				font-family: var(--font-mono);
+				font-size: 0.7rem;
+				letter-spacing: 0.05em;
+				text-transform: uppercase;
+				color: rgba(var(--gray), 80%);
+				margin-bottom: 0.35em;
+			}
+			.tag {
+				align-self: flex-start;
+				margin: 0.55rem 0 0;
+				padding: 0.12em 0.55em;
+				border-radius: 999px;
+				font-family: var(--font-mono);
+				font-size: 0.68rem;
+				letter-spacing: 0.04em;
+				border: 1px solid var(--border);
+				color: rgb(var(--gray));
+			}
+			.tag[data-s='used'] {
+				border-color: rgba(191, 63, 38, 0.45);
+				color: var(--accent);
+			}
+			.tag[data-s='avoid'] {
+				border-style: dashed;
+			}
+			.how {
+				margin: 0.6rem 0 0;
+				font-size: 0.86rem;
+				line-height: 1.7;
+				color: #3d3a34;
+			}
+			.where {
+				margin: 0.5rem 0 0;
+				font-size: 0.78rem;
+				color: rgba(var(--gray), 90%);
+			}
+			.demo {
+				position: relative;
+				height: 78px;
+				margin: 0.9rem 0 0;
+				border-radius: 8px;
+				border: 1px solid var(--border);
+				background: var(--bg);
+				display: grid;
+				place-items: center;
+				overflow: hidden;
+				--demo-ink: rgb(var(--black));
+			}
+			.demo .hint {
+				position: absolute;
+				right: 8px;
+				bottom: 6px;
+				font-family: var(--font-mono);
+				font-size: 0.62rem;
+				color: rgba(var(--gray), 65%);
+			}
+			.s-text {
+				margin: 0;
+				font-family: var(--font-serif-cjk);
+				font-size: 1.25rem;
+				color: var(--demo-ink);
+			}
+			.s-rule {
+				display: block;
+				width: 62%;
+				height: 1px;
+				background: var(--accent);
+			}
+			.s-box {
+				display: block;
+				width: 58%;
+				height: 34px;
+				border-radius: 6px;
+				border: 1px solid var(--border);
+				background: #fffdf8;
+			}
+			.s-chips {
+				display: flex;
+				gap: 0.4rem;
+			}
+			.s-chips i {
+				width: 26px;
+				height: 12px;
+				border-radius: 999px;
+				background: rgba(var(--gray), 30%);
+			}
+			.s-img {
+				display: block;
+				width: 62%;
+				height: 40px;
+				border-radius: 6px;
+				background: repeating-linear-gradient(
+					135deg,
+					rgba(var(--gray), 22%) 0 6px,
+					rgba(var(--gray), 10%) 6px 12px
+				);
+			}
+
+			/* ---- 逐个效果的演示 ---- */
+			.demo[data-demo='fade-up'] .s-text,
+			.demo[data-demo='slide-in'] .s-text {
+				opacity: 0;
+				transform: translate3d(0, 12px, 0);
+			}
+			.demo[data-demo='slide-in'] .s-text {
+				transform: translate3d(-16px, 0, 0);
+			}
+			.demo[data-demo='fade-up']:hover .s-text,
+			.demo[data-demo='slide-in']:hover .s-text {
+				animation: fx-up 0.7s var(--e-expo) both;
+			}
+			@keyframes fx-up {
+				from {
+					opacity: 0;
+					transform: translate3d(0, 12px, 0);
+				}
+				to {
+					opacity: 1;
+					transform: none;
+				}
+			}
+			.demo[data-demo='line-mask'] .s-text {
+				clip-path: inset(0 0 calc(100% - 2px) 0);
+			}
+			.demo[data-demo='line-mask']:hover .s-text {
+				animation: fx-mask 0.9s var(--e-expo) both;
+			}
+			@keyframes fx-mask {
+				from {
+					clip-path: inset(0 0 calc(100% - 2px) 0);
+					transform: translate3d(0, 92%, 0);
+				}
+				to {
+					clip-path: inset(-18% -6% -14% -6%);
+					transform: none;
+				}
+			}
+			.demo[data-demo='stagger'] i,
+			.demo[data-demo='paper-ink'] i {
+				opacity: 0.25;
+			}
+			.demo[data-demo='stagger']:hover i {
+				animation: fx-pop 0.5s var(--e-out) both;
+			}
+			.demo[data-demo='stagger']:hover i:nth-child(2) {
+				animation-delay: 90ms;
+			}
+			.demo[data-demo='stagger']:hover i:nth-child(3) {
+				animation-delay: 180ms;
+			}
+			.demo[data-demo='stagger']:hover i:nth-child(4) {
+				animation-delay: 270ms;
+			}
+			@keyframes fx-pop {
+				from {
+					opacity: 0;
+					transform: translate3d(0, 8px, 0);
+				}
+				to {
+					opacity: 1;
+					transform: none;
+				}
+			}
+			.demo[data-demo='rule-wipe'] .s-rule {
+				transform: scaleX(0);
+				transform-origin: left;
+			}
+			.demo[data-demo='rule-wipe']:hover .s-rule,
+			.demo[data-demo='scroll-progress']:hover .s-rule,
+			.demo[data-demo='scroll-timeline']:hover .s-rule {
+				animation: fx-wipe 0.9s var(--e-expo) both;
+			}
+			@keyframes fx-wipe {
+				from {
+					transform: scaleX(0);
+				}
+				to {
+					transform: scaleX(1);
+				}
+			}
+			.demo[data-demo='scramble'] .s-text {
+				font-family: var(--font-mono);
+				font-size: 1.05rem;
+				letter-spacing: 0.14em;
+			}
+			.demo[data-demo='scramble']:hover .s-text {
+				animation: fx-flick 0.34s steps(2) 3;
+			}
+			@keyframes fx-flick {
+				50% {
+					opacity: 0.35;
+				}
+			}
+			.demo[data-demo='underline-sweep'] .s-text {
+				background-image: linear-gradient(var(--accent), var(--accent));
+				background-size: 0% 1px;
+				background-position: 0 100%;
+				background-repeat: no-repeat;
+				transition: background-size 0.5s var(--e-expo);
+			}
+			.demo[data-demo='underline-sweep']:hover .s-text {
+				background-size: 100% 1px;
+			}
+			.demo[data-demo='row-spotlight'] {
+				background: radial-gradient(
+					120px 60px at var(--mx, 50%) var(--my, 50%),
+					rgba(191, 63, 38, 0.14),
+					transparent 70%
+				);
+			}
+			.demo[data-demo='row-spotlight']:hover {
+				--mx: 72%;
+			}
+			.demo[data-demo='hover-lift']:hover .s-box {
+				transform: translate3d(0, -3px, 0);
+				box-shadow: 0 14px 24px -18px rgba(23, 22, 26, 40%);
+			}
+			.demo[data-demo='hover-lift'] .s-box {
+				transition:
+					transform 0.3s var(--e-out),
+					box-shadow 0.3s var(--e-out);
+			}
+			.demo[data-demo='magnetic']:hover .s-box {
+				transform: translate3d(10px, 0, 0);
+			}
+			.demo[data-demo='magnetic'] .s-box {
+				transition: transform 0.35s var(--e-expo);
+			}
+			.demo[data-demo='glow-border'] .s-box {
+				border-color: rgba(191, 63, 38, 0.6);
+				box-shadow: 0 0 14px 2px rgba(191, 63, 38, 0.35);
+			}
+			.demo[data-demo='parallax'] {
+				background-image:
+					radial-gradient(circle at 20% 40%, rgba(var(--gray), 18%) 0 6px, transparent 7px),
+					radial-gradient(circle at 60% 70%, rgba(var(--gray), 14%) 0 9px, transparent 10px),
+					radial-gradient(circle at 82% 30%, rgba(var(--gray), 12%) 0 5px, transparent 6px);
+			}
+			.demo[data-demo='parallax'] .s-box {
+				background: #fffdf8;
+			}
+			.demo[data-demo='parallax']:hover .s-box {
+				transform: translate3d(0, -9px, 0);
+			}
+			.demo[data-demo='parallax'] .s-box {
+				transition: transform 1.2s var(--e-out);
+			}
+			/* 粘性：左边那条跟着滚（不动），右边的内容在演示里滑过去 */
+			.demo[data-demo='sticky-col'] {
+				display: block;
+			}
+			.demo[data-demo='sticky-col']::before {
+				content: '';
+				position: absolute;
+				left: 10px;
+				top: 10px;
+				bottom: 10px;
+				width: 26%;
+				border-radius: 6px;
+				background: rgba(191, 63, 38, 22%);
+			}
+			.demo[data-demo='sticky-col'] .s-box {
+				position: absolute;
+				left: 42%;
+				right: 10px;
+				top: 20px;
+				height: 26px;
+				background: #fffdf8;
+			}
+			.demo[data-demo='sticky-col']:hover .s-box {
+				animation: fx-sticky 1.5s var(--e-out) both;
+			}
+			@keyframes fx-sticky {
+				0% {
+					transform: translate3d(0, 22px, 0);
+				}
+				55%,
+				100% {
+					transform: none;
+				}
+			}
+			.demo[data-demo='ken-burns'] {
+				display: block;
+			}
+			.demo[data-demo='ken-burns'] .s-img {
+				width: 100%;
+				height: 100%;
+				border-radius: 0;
+				animation: fx-kb 9s var(--e-out) infinite alternate;
+			}
+			@keyframes fx-kb {
+				from {
+					transform: scale(1) translate3d(0, 0, 0);
+				}
+				to {
+					transform: scale(1.16) translate3d(-4%, 3%, 0);
+				}
+			}
+			.demo[data-demo='marquee'] {
+				display: block;
+			}
+			.demo[data-demo='marquee'] .s-chips {
+				position: absolute;
+				left: 0;
+				top: 50%;
+				transform: translateY(-50%);
+				display: flex;
+				gap: 0.5rem;
+				animation: fx-marquee 7s linear infinite;
+			}
+			@keyframes fx-marquee {
+				from {
+					transform: translate3d(110%, -50%, 0);
+				}
+				to {
+					transform: translate3d(-120%, -50%, 0);
+				}
+			}
+			.demo[data-demo='grain']::after {
+				content: '';
+				position: absolute;
+				inset: 0;
+				background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='90' height='90' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+				opacity: 0.16;
+				mix-blend-mode: multiply;
+				pointer-events: none;
+			}
+			.demo[data-demo='ambient-orbs']::before,
+			.demo[data-demo='ambient-orbs']::after {
+				content: '';
+				position: absolute;
+				width: 68px;
+				height: 68px;
+				border-radius: 50%;
+				mix-blend-mode: multiply;
+			}
+			.demo[data-demo='ambient-orbs']::before {
+				left: 22%;
+				top: 10%;
+				background: radial-gradient(circle, rgba(191, 63, 38, 0.2), transparent 68%);
+				animation: fx-drift-a 9s var(--e-out) infinite alternate;
+			}
+			.demo[data-demo='ambient-orbs']::after {
+				left: 55%;
+				top: 26%;
+				background: radial-gradient(circle, rgba(122, 106, 47, 0.22), transparent 68%);
+				animation: fx-drift-b 11s var(--e-out) infinite alternate;
+			}
+			@keyframes fx-drift-a {
+				to {
+					transform: translate3d(16px, 10px, 0) scale(1.12);
+				}
+			}
+			@keyframes fx-drift-b {
+				to {
+					transform: translate3d(-14px, -8px, 0) scale(0.92);
+				}
+			}
+			.demo[data-demo='glass'] {
+				background-image: repeating-linear-gradient(
+					115deg,
+					rgba(var(--gray), 26%) 0 10px,
+					rgba(191, 63, 38, 18%) 10px 20px
+				);
+			}
+			.demo[data-demo='glass'] .s-box {
+				backdrop-filter: blur(6px) saturate(130%);
+				background: rgba(246, 243, 236, 0.5);
+			}
+			.demo[data-demo='duotone'] .s-img {
+				filter: grayscale(1) contrast(1.3);
+				background: repeating-linear-gradient(
+					135deg,
+					rgba(191, 63, 38, 35%) 0 6px,
+					rgba(23, 22, 26, 45%) 6px 12px
+				);
+			}
+			.demo[data-demo='view-transition'] .s-text {
+				transition: opacity 0.4s var(--e-out);
+			}
+			.demo[data-demo='view-transition']:hover .s-text {
+				animation: fx-vt 1.1s var(--e-out) both;
+			}
+			@keyframes fx-vt {
+				0% {
+					opacity: 1;
+					transform: none;
+					clip-path: inset(0 0 0 0);
+				}
+				35% {
+					opacity: 0;
+					transform: translate3d(0, -10px, 0);
+				}
+				36% {
+					opacity: 0;
+					transform: translate3d(0, 10px, 0);
+					clip-path: inset(0 0 100% 0);
+				}
+				100% {
+					opacity: 1;
+					transform: none;
+					clip-path: inset(0 0 0 0);
+				}
+			}
+			.demo[data-demo='skeleton'] {
+				display: block;
+			}
+			.demo[data-demo='skeleton'] i {
+				position: absolute;
+				inset: 14px 18%;
+				border-radius: 6px;
+				background: linear-gradient(
+					90deg,
+					rgba(var(--gray), 10%) 0%,
+					rgba(var(--gray), 22%) 50%,
+					rgba(var(--gray), 10%) 100%
+				);
+				background-size: 200% 100%;
+				animation: fx-shim 1.6s linear infinite;
+			}
+			@keyframes fx-shim {
+				from {
+					background-position: 120% 0;
+				}
+				to {
+					background-position: -120% 0;
+				}
+			}
+			.demo[data-demo='blur-up'] .s-img {
+				animation: fx-blur 3.2s var(--e-out) infinite;
+			}
+			@keyframes fx-blur {
+				0%,
+				12% {
+					filter: blur(9px);
+					transform: scale(1.06);
+				}
+				45%,
+				80% {
+					filter: blur(0);
+					transform: scale(1);
+				}
+				100% {
+					filter: blur(9px);
+					transform: scale(1.06);
+				}
+			}
+			.demo[data-demo='flip'] .s-box {
+				transition: none;
+			}
+			.demo[data-demo='flip']:hover .s-box {
+				animation: fx-flip 0.9s var(--e-expo) both;
+			}
+			@keyframes fx-flip {
+				0% {
+					transform: translate3d(-26%, 0, 0);
+				}
+				100% {
+					transform: none;
+				}
+			}
+			.demo[data-demo='bento'] {
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				grid-auto-rows: 22px;
+				gap: 5px;
+				padding: 8px;
+				place-items: stretch;
+			}
+			.demo[data-demo='bento'] i {
+				border-radius: 5px;
+				background: rgba(var(--gray), 14%);
+			}
+			.demo[data-demo='bento'] i:nth-child(1) {
+				grid-column: span 2;
+				grid-row: span 2;
+				background: rgba(191, 63, 38, 16%);
+			}
+			.demo[data-demo='bento'] i:nth-child(4) {
+				grid-column: span 2;
+			}
+			.demo[data-demo='reduced-motion'] .s-text {
+				opacity: 1;
+				transform: none;
+			}
+			@media (prefers-reduced-motion: reduce) {
+				.demo,
+				.demo *,
+				.demo::after {
+					animation: none !important;
+					transition: none !important;
+				}
+			}
+			.notes {
+				margin-top: 3.4em;
+				padding-top: 1.6em;
+				border-top: 1px solid var(--rule);
+				color: rgb(var(--gray));
+				font-size: 0.95rem;
+				line-height: 1.85;
+			}
+			.notes h2 {
+				margin: 0 0 0.9em;
+				font-family: var(--font-serif-cjk);
+				font-size: 1.25rem;
+				color: rgb(var(--black));
+			}
+			.notes a {
+				color: rgb(var(--black));
+				text-decoration: none;
+				border-bottom: 1px solid var(--border);
+			}
+			.notes a:hover {
+				color: var(--accent);
+				border-color: var(--accent);
+			}
+			.notes code {
+				font-size: 0.85em;
+			}
+			.notes ul {
+				margin: 0.6em 0 1.4em;
+				padding-left: 1.2em;
+			}
+			.notes li {
+				margin-bottom: 0.35em;
+			}
+			.refs {
+				margin-top: 2.6em;
+			}
+			.refs h2 {
+				margin: 0 0 0.9em;
+				font-family: var(--font-serif-cjk);
+				font-size: 1.25rem;
+				color: rgb(var(--black));
+			}
+			.refs h3 {
+				margin: 1.9em 0 0.5em;
+				font-family: var(--font-mono);
+				font-size: 0.78rem;
+				letter-spacing: 0.06em;
+				color: rgb(var(--black));
+			}
+			.refs h3::before {
+				content: "";
+				display: inline-block;
+				width: 0.5em;
+				height: 0.5em;
+				margin-right: 0.55em;
+				background: var(--accent);
+				vertical-align: 0.08em;
+			}
+			.refs dl {
+				margin: 0;
+			}
+			.refs div {
+				display: grid;
+				grid-template-columns: minmax(9.5rem, auto) 1fr;
+				gap: 0.4em 1.1em;
+				align-items: baseline;
+				padding: 0.55em 0;
+				border-top: 1px solid var(--border);
+			}
+			.refs dt {
+				font-family: var(--font-mono);
+				font-size: 0.82rem;
+				color: rgb(var(--black));
+			}
+			.refs dt span {
+				display: block;
+				margin-top: 0.2em;
+				font-size: 0.7rem;
+				letter-spacing: 0.04em;
+				color: rgba(var(--gray), 75%);
+			}
+			.refs dd {
+				margin: 0;
+				font-size: 0.9rem;
+				line-height: 1.75;
+			}
+			.refs code {
+				font-size: 0.84em;
+			}
+			@media (max-width: 640px) {
+				.refs div {
+					grid-template-columns: 1fr;
+					gap: 0.25em;
+				}
+			}
+		</style>
+	</head>
+
+	<body>
+		<Ambient />
+		<Header />
+		<main>
+			<div class="title">
+				<p class="kicker" data-reveal style="--rd:60ms">
+					{flat.length} 条 · 其中 {usedCount} 条本站在用
+				</p>
+				<h1 data-mask data-reveal style="--rd:140ms">效果图鉴</h1>
+				<p class="lede" data-reveal style="--rd:260ms">
+					我自己攒的一张对照表：看到一个前端效果，能叫出它的名字，也就知道该搜什么。
+					每条写明机制和「这个站上到底用没用」，演示是真的在跑，不是截图。
+				</p>
+				<div class="legend" data-reveal style="--rd:320ms">
+					<span><b class="used">本站在用</b>：现在就能在这页看到</span>
+					<span><b>没做</b>：知道有这个东西</span>
+					<span><b>不做</b>：明确不合适</span>
+				</div>
+				<hr class="rule" data-reveal="grow" style="--rd:340ms" />
+			</div>
+
+			{
+				groups.map((g, gi) => (
+					<section class="group" data-reveal style={`--rd:${gi * 60}ms`}>
+						<h2>{g.name}</h2>
+						<p class="note">{g.note}</p>
+						<div class="grid" data-stagger data-stagger-step="70">
+							{g.items.map((e) => (
+								<article class="card" data-reveal>
+									<h3>
+										<span>{e.en}</span>
+										{e.cn}
+									</h3>
+									<div class="demo" data-demo={e.id}>
+										{e.slot === 'text' && <p class="s-text">纸墨 test</p>}
+										{e.slot === 'rule' && <i class="s-rule" />}
+										{e.slot === 'box' && <i class="s-box" />}
+										{e.slot === 'chips' && (
+											<span class="s-chips">
+												<i />
+												<i />
+												<i />
+												<i />
+											</span>
+										)}
+										{e.slot === 'img' && <i class="s-img" />}
+										<span class="hint">
+											{looping.has(e.id)
+												? '循环在跑'
+												: e.status === 'used'
+													? '悬停重播'
+													: e.status === 'none'
+														? '示例'
+														: '这就是我不做的那版'}
+										</span>
+									</div>
+									<p class="how">{e.how}</p>
+									<p class="where">{e.where}</p>
+									<span class="tag" data-s={e.status}>
+										{STATUS[e.status]}
+									</span>
+								</article>
+							))}
+						</div>
+					</section>
+				))
+			}
+
+			<div class="notes">
+				<h2>这份表怎么读</h2>
+				<p>
+					名字比实现重要。同样一个「进场」，叫得出 <em>line-mask reveal</em> 就搜得到那一派的做法，叫「那个文字往上冒的动画」就只能碰运气。
+					所以上面每条都先给英文名，再给中文说明，最后一行写它在这个站上的实际位置。
+				</p>
+				<p>
+					本站的动效基座是零依赖自研的（两个文件：<code>src/styles/motion.css</code> 定义效果，<code>src/scripts/motion.ts</code> 负责触发），
+					只动 <code>transform</code> / <code>opacity</code> / <code>clip-path</code> / 自定义属性，不碰布局属性——FLIP、骨架屏、模糊上采样这些我一行代码都没写，
+					因为静态站没有需要它们的地方，但得知道它们叫什么、什么时候值得写。
+				</p>
+				<p>
+					有两条规矩是吃过亏定的：<strong>不做渐变字和发光边框</strong>，也<strong>不做 3D 倾斜卡片</strong>。
+					上面 <code>glow-border</code> 那一格就是照着「好看的做法」画出来的样子，用来提醒自己它在这个纸上底色里有多脏。
+				</p>
+				<p>
+					另外，任何只挂在 hover 上的效果，手机上等于没有——<code>row-spotlight</code>、<code>hover-lift</code> 这类都只当锦上添花，
+					关键信息一律留了常态可见的版本。
+				</p>
+			</div>
+
+			{/* 名字好记，授权容易记错。这几条是照着各仓库自己的 LICENSE / 官方 license 页核过的，
+			    不是抄二手清单——二手清单里把 Aceternity 说成 MIT 的版本流传得很广，而它是错的。 */}
+			<div class="refs">
+				<h2>这些名字从哪儿查，以及能不能抄</h2>
+				<h3>授权宽松，做法可以直接搬</h3>
+				<dl>
+					<div>
+						<dt>Magic UI<span>MIT</span></dt>
+						<dd>
+							<code>magicuidesign/magicui</code>。这页里 bento、border-beam、shimmer、glare、hyper-text 这些叫法，
+							基本都能在这套注册表里对上号。
+						</dd>
+					</div>
+					<div>
+						<dt>Motion<span>MIT</span></dt>
+						<dd>
+							<code>motiondivision/motion</code>。弹簧、手势、布局动画的事实标准；<code>@motionone/*</code> 是它的旧产品线。
+						</dd>
+					</div>
+					<div>
+						<dt>AutoAnimate<span>MIT</span></dt>
+						<dd><code>formkit/auto-animate</code>，列表增删的补间一行搞定，对应上表的 <code>auto-animate</code>。</dd>
+					</div>
+					<div>
+						<dt>Lenis<span>MIT</span></dt>
+						<dd><code>darkroomengineering/lenis</code>。平滑滚动那一派的现在时。</dd>
+					</div>
+					<div>
+						<dt>Barba.js<span>MIT</span></dt>
+						<dd>
+							<code>barbajs/barba</code>。页间过渡在 View Transitions 出来之前靠它，现在更多是「知道有这条路」的储备。
+						</dd>
+					</div>
+					<div>
+						<dt>Splitting / SplitType<span>MIT / ISC</span></dt>
+						<dd>
+							分词动画的两个库：<code>shshaw/Splitting</code> 是 MIT，<code>lukePeavey/SplitType</code> 是 ISC。
+							常被记混，作者也不是同一个人。
+						</dd>
+					</div>
+					<div>
+						<dt>CSSgram<span>MIT</span></dt>
+						<dd><code>una/CSSgram</code>，把 Instagram 那批滤镜做成了类名，<code>duotone</code> 一类命名的出处之一。</dd>
+					</div>
+					<div>
+						<dt>uiverse galaxy<span>MIT</span></dt>
+						<dd><code>uiverse-io/galaxy</code>，社区投稿的纯 CSS 件，翻命名和翻实现都行。</dd>
+					</div>
+				</dl>
+				<h3>看着像 MIT，其实不是</h3>
+				<dl>
+					<div>
+						<dt>animate.css<span>Hippocratic-2.1</span></dt>
+						<dd>
+							仓库 <code>LICENSE</code> 写的是 Hippocratic 2.1，条件是不得用于违反人权法的使用；npm 清单里报的 MIT 和仓库不一致，以仓库为准。
+						</dd>
+					</div>
+					<div>
+						<dt>GSAP<span>自定义授权</span></dt>
+						<dd>
+							非开源。2025 年起归 Webflow，Standard「No Charge」授权把 SplitText、MorphSVG 这些原本会员限定的插件也放开到可商用，
+							禁的是拿它去做和 Webflow 竞争的可视化搭建工具。
+						</dd>
+					</div>
+					<div>
+						<dt>Aceternity UI<span>专有</span></dt>
+						<dd>
+							官方 license 页原话是 not open source：个人和商用成品都不限量、不要求署名，但组件源码不能再分发、不能上素材市场。
+							各大全集文章里标它 MIT 的，是错的。
+						</dd>
+					</div>
+					<div>
+						<dt>Hover.css<span>条件 MIT</span></dt>
+						<dd>
+							<code>IanLunn/Hover</code> 的 <code>license.txt</code> 只对个人项目和开源应用给 MIT 式条款，商用要买授权。
+							上表 <code>hover-lift</code> 那一派的现成件，抄概念可以、整包搬要看用途。
+						</dd>
+					</div>
+				</dl>
+				<h3>查名字本身去哪</h3>
+				<ul>
+					<li>
+						<em>Ken Burns effect</em> 的条目在 Wikipedia，讲的就是纪录片里对静照做推拉摇移那套；<em>skeleton screen</em> 是
+						Luke Wroblewski 在 2013-09-17 提出并命名的。
+					</li>
+					<li>
+						平台能力看 MDN 三页：<code>View Transitions API</code>、<em>scroll-driven animations</em> 指南、<code>feTurbulence</code>。
+					</li>
+					<li>
+						兼容性查 caniuse 的 <code>animation-timeline</code>：Chrome/Edge 115、Safari 26、Firefox 159 已经就位，
+						不再是 Chromium 独占，但老浏览器仍要 <code>@supports (animation-timeline: view())</code> 兜一层。
+					</li>
+				</ul>
+			</div>
+		</main>
+		<Footer />
+	</body>
+</html>
