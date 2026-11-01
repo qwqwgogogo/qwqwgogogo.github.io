@@ -13,7 +13,9 @@ import HeaderLink from './HeaderLink.astro';
 		<div class="internal-links">
 			<HeaderLink href="/">首页</HeaderLink>
 			<HeaderLink href="/blog">文章</HeaderLink>
+			<HeaderLink href="/notes">笔记</HeaderLink>
 			<HeaderLink href="/knowledge">知识库</HeaderLink>
+			<HeaderLink href="/effects">效果图鉴</HeaderLink>
 			<HeaderLink href="/about">关于</HeaderLink>
 		</div>
 		<div class="social-links">
@@ -121,16 +123,26 @@ import HeaderLink from './HeaderLink.astro';
 		color: var(--accent);
 	}
 	@media (max-width: 720px) {
+		/* 六个入口在手机上放不进一行，让链接自己换到第二行，高度别写死 */
+		nav {
+			flex-wrap: wrap;
+			height: auto;
+			row-gap: 0.3rem;
+			padding-top: 0.5rem;
+			padding-bottom: 0.5rem;
+		}
+		header.is-scrolled nav {
+			height: auto;
+		}
 		.internal-links {
-			margin-left: auto;
+			order: 3;
+			width: 100%;
+			margin-left: 0;
 			margin-right: 0;
-			gap: 1.1rem;
+			gap: 1rem;
 		}
 		.social-links {
 			display: none;
-		}
-		nav {
-			height: 58px;
 		}
 	}
 </style>

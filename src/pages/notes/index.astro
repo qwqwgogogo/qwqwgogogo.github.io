@@ -1,0 +1,317 @@
+---
+import { getCollection } from 'astro:content';
+import Ambient from '../../components/Ambient.astro';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import FormattedDate from '../../components/FormattedDate.astro';
+import Header from '../../components/Header.astro';
+import { SITE_TITLE } from '../../consts';
+import { subjects } from '../../data/subjects.mjs';
+
+const notes = (await getCollection('notes')).sort(
+	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+// 一门科一栏：有笔记就列出来，没有也留着，空栏是「还没写」的提醒，不是缺页
+const bySubject = subjects.map((s) => ({
+	...s,
+	items: notes.filter((n) => n.data.subject === s.key),
+}));
+const filledSubjects = bySubject.filter((s) => s.items.length > 0).length;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<BaseHead
+			title={`学习笔记 · ${SITE_TITLE}`}
+			description="408 的复习笔记：按科目分栏，每篇里的考点同时进知识库那张图。"
+		/>
+		<style>
+			main {
+				width: 900px;
+				max-width: calc(100% - 2.5em);
+				margin: auto;
+				padding: 0 1.25em 4em;
+			}
+			.head {
+				padding: clamp(3.5rem, 9vh, 6rem) 0 2.2rem;
+			}
+			.kicker {
+				margin: 0 0 0.9em;
+				font-family: var(--font-mono);
+				font-size: 0.78rem;
+				letter-spacing: 0.08em;
+				color: var(--accent);
+			}
+			.heading {
+				margin: 0;
+				font-family: var(--font-serif-cjk);
+				font-size: clamp(2.4rem, 6vw, 3.6rem);
+				font-weight: 700;
+				line-height: 1.2;
+				letter-spacing: -0.01em;
+			}
+			.lede {
+				max-width: 60ch;
+				margin: 0.9rem 0 0;
+				color: rgb(var(--gray));
+				line-height: 1.8;
+			}
+			.lede a {
+				color: rgb(var(--black));
+				text-decoration: none;
+				border-bottom: 1px solid var(--border);
+			}
+			.lede a:hover {
+				border-color: var(--accent);
+				color: var(--accent);
+			}
+			.subject {
+				margin-top: 3rem;
+				padding-top: 1.5rem;
+				border-top: 1px solid var(--rule);
+			}
+			.subject header {
+				display: flex;
+				align-items: baseline;
+				gap: 0.9rem;
+				margin-bottom: 1.1rem;
+			}
+			.subject h2 {
+				margin: 0;
+				font-family: var(--font-serif-cjk);
+				font-size: 1.4rem;
+			}
+			.tally {
+				font-family: var(--font-mono);
+				font-size: 0.75rem;
+				letter-spacing: 0.05em;
+				color: rgba(var(--gray), 85%);
+			}
+			.tally b {
+				color: var(--accent);
+				font-weight: 400;
+			}
+			.graph-link {
+				margin-left: auto;
+				font-family: var(--font-mono);
+				font-size: 0.75rem;
+				color: rgba(var(--gray), 80%);
+				text-decoration: none;
+				border-bottom: 1px solid var(--border);
+			}
+			.graph-link:hover {
+				color: var(--accent);
+				border-color: var(--accent);
+			}
+			ul {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+			}
+			li + li {
+				margin-top: 0.8rem;
+			}
+			.card {
+				position: relative;
+				padding: 1.25rem 1.3rem;
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				background: #fffdf8;
+				transition:
+					border-color 0.35s var(--e-out),
+					transform 0.35s var(--e-out),
+					box-shadow 0.35s var(--e-out);
+			}
+			.card:hover {
+				border-color: rgba(191, 63, 38, 0.5);
+				box-shadow: 0 18px 34px -28px rgba(23, 22, 26, 45%);
+			}
+			.card h3 {
+				margin: 0;
+				font-family: var(--font-serif-cjk);
+				font-size: 1.15rem;
+				line-height: 1.35;
+				color: rgb(var(--black));
+			}
+			.card p {
+				margin: 0.45rem 0 0;
+				color: rgb(var(--gray));
+				font-size: 0.93rem;
+				line-height: 1.75;
+			}
+			.card h3 a {
+				color: inherit;
+				text-decoration: none;
+			}
+			.card h3 a::after {
+				content: "";
+				position: absolute;
+				inset: 0;
+				border-radius: 12px;
+			}
+			.card footer {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.9rem;
+				align-items: baseline;
+				margin-top: 0.85rem;
+			}
+			.card :global(time) {
+				font-family: var(--font-mono);
+				font-size: 0.74rem;
+				letter-spacing: 0.04em;
+				color: rgba(var(--gray), 80%);
+			}
+			.tags {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.4rem;
+				margin-left: auto;
+			}
+			/* 考点直接挂到图谱的按标签选中：?label= 是知识库页认的查询参数 */
+			.tags a {
+				position: relative;
+				z-index: 1;
+				padding: 0.16em 0.6em;
+				border: 1px solid var(--border);
+				border-radius: 999px;
+				font-family: var(--font-mono);
+				font-size: 0.72rem;
+				color: rgb(var(--gray));
+				text-decoration: none;
+				transition:
+					color 0.3s var(--e-out),
+					border-color 0.3s var(--e-out);
+			}
+			.tags a:hover {
+				color: var(--accent);
+				border-color: var(--accent);
+			}
+			.empty {
+				margin: 0;
+				padding: 1rem 1.1rem;
+				border: 1px dashed var(--border);
+				border-radius: 12px;
+				color: rgba(var(--gray), 85%);
+				font-size: 0.9rem;
+				line-height: 1.7;
+			}
+			.empty a {
+				color: rgb(var(--gray));
+				text-decoration: none;
+				border-bottom: 1px solid var(--border);
+			}
+			.empty a:hover {
+				color: var(--accent);
+			}
+			.how {
+				margin-top: 3.4rem;
+				padding-top: 1.6rem;
+				border-top: 1px solid var(--rule);
+				color: rgb(var(--gray));
+				font-size: 0.95rem;
+				line-height: 1.85;
+			}
+			.how h2 {
+				margin: 0 0 0.9em;
+				font-family: var(--font-serif-cjk);
+				font-size: 1.25rem;
+				color: rgb(var(--black));
+			}
+			.how code {
+				font-size: 0.85em;
+			}
+			@media (max-width: 640px) {
+				.subject header {
+					flex-wrap: wrap;
+				}
+				.graph-link {
+					margin-left: 0;
+				}
+				.tags {
+					margin-left: 0;
+					width: 100%;
+				}
+			}
+		</style>
+	</head>
+
+	<body>
+		<Ambient />
+		<Header />
+		<main>
+			<header class="head">
+				<p class="kicker" data-reveal style="--rd:60ms">
+					共 <span>{notes.length}</span> 篇 · 408 四门科目
+				</p>
+				<h1 class="heading" data-mask data-reveal style="--rd:140ms">学习笔记</h1>
+				<p class="lede" data-reveal style="--rd:260ms">
+					复习 408 时自己写的东西，写完一篇就搬一篇上来。它和<a href="/knowledge/">知识库</a>是两套东西：
+					那边是从正文里抽术语自动连出来的图，这边是我按科目手动整理的原文。
+				</p>
+			</header>
+
+			{
+				bySubject.map((s, i) => (
+					<section class="subject" data-reveal style={`--rd:${i * 70}ms`}>
+						<header>
+							<h2>{s.name}</h2>
+							<p class="tally">
+								<b>{s.items.length}</b> 篇
+							</p>
+							{s.items.length > 0 && <a class="graph-link" href="/knowledge/">在图里看这一科 ↗</a>}
+						</header>
+						{s.items.length > 0 ? (
+							<ul data-stagger data-stagger-step="70">
+								{s.items.map((note) => (
+									<li data-reveal>
+										<div class="card">
+											{/* 卡片本体不能是 <a>：考点标签也是 <a>，嵌套锚点会让解析器
+											    提前关掉外层那个，页脚就被甩到卡片外面。标题挂链接，用 ::after 铺满整张卡。 */}
+											<h3>
+												<a href={`/notes/${note.id}/`}>{note.data.title}</a>
+											</h3>
+											<p>{note.data.description}</p>
+											<footer>
+												<FormattedDate date={note.data.pubDate} />
+												<span class="tags">
+													{note.data.tags.slice(0, 6).map((tag) => (
+														<a href={`/knowledge/?label=${encodeURIComponent(tag)}`}>{tag}</a>
+													))}
+												</span>
+											</footer>
+										</div>
+									</li>
+								))}
+							</ul>
+						) : (
+							<p class="empty">
+								这一科还没有笔记。知识图谱里也不会出现它的节点——<code>build-knowledge.mjs</code> 只给真的有笔记的科目建点。
+								写了第一篇才会出现在这里。
+							</p>
+						)}
+					</section>
+				))
+			}
+
+			<div class="how">
+				<h2>笔记怎么进图的</h2>
+				<p>
+					每篇笔记的 frontmatter 有一个 <code>subject</code>（四门课的 key：<code>ds</code> / <code>co</code> /
+					<code>os</code> / <code>net</code>，写错会在构建时报错）和一组 <code>tags</code>。tags 是我自己声明的考点，
+					但脚本不信任声明：它会回正文里数一遍，正文没出现过的词直接丢掉，不进图。所以「标了但没写」在这种图上藏不住。
+				</p>
+				<p>
+					另外，笔记里的英文术语走的是和文章一样的规则——全大写缩写、反引号里的标识符、带版本号或点划线的写法，
+					被提过两次的才留。中文考点只能靠 tags，因为脚本没有分词能力，硬猜只会造出一堆奇怪的词。
+				</p>
+				<p>
+					点上面任意一个考点会跳到知识库并按标签选中它（<code>?label=</code>）。四门课里目前有笔记的是
+					{filledSubjects} 门，其余的空着，等我自己写上。
+				</p>
+			</div>
+		</main>
+		<Footer />
+	</body>
+</html>

@@ -11,7 +11,17 @@ import knowledge from '../data/knowledge.json';
 // 构建脚本产出的那份 JSON：服务端用它画降级的平面图，客户端用它画 3D，同一来源不会各说各话
 const graph = knowledge as unknown as Graph;
 const nodes = new Map<number, GraphNode>(graph.nodes.map((n) => [n.id, n]));
-const titles = new Map(graph.posts.map((p) => [p.slug, p.title]));
+const titles = new Map<string, string>(
+	[...graph.posts, ...graph.notes].map((d) => [d.slug, d.title] as [string, string]),
+);
+const subjectName = new Map<string, string>(graph.subjects.map((s) => [s.key, s.name] as [string, string]));
+
+const KIND_LABEL: Record<GraphNode['kind'], string> = {
+	concept: '概念',
+	project: '项目',
+	note: '学习笔记',
+	subject: '408 科目',
+};
 const degreeOf = new Map<number, number>();
 graph.edges.forEach((e) => {
 	degreeOf.set(e.a, (degreeOf.get(e.a) ?? 0) + e.weight);
@@ -53,32 +63,45 @@ function boot() {
 	const buttons = [...document.querySelectorAll<HTMLButtonElement>('button[data-node-id]')];
 	let selectedId = -1;
 
+	const linkList = (slugs: string[], base: string) => {
+		const list = document.createElement('ul');
+		for (const slug of slugs) {
+			const li = document.createElement('li');
+			const a = document.createElement('a');
+			a.href = `${base}${slug}/`;
+			a.textContent = titles.get(slug) ?? slug;
+			li.append(a);
+			list.append(li);
+		}
+		return list;
+	};
+
 	const render = (node: GraphNode, related: GraphNode[]) => {
 		detail.replaceChildren();
-		detail.append(el('p', 'kind', node.kind === 'project' ? '项目' : '概念'));
-		detail.append(el('p', 'name', node.label));
+		detail.append(el('p', 'kind', KIND_LABEL[node.kind]));
+		detail.append(
+			el(
+				'p',
+				'name',
+				node.kind === 'note' ? (titles.get(node.notes[0] ?? '') ?? node.label) : node.label,
+			),
+		);
 		detail.append(
 			el(
 				'p',
 				'meta',
 				node.kind === 'project'
 					? '首页挂着的项目条目'
-					: `全站提到 ${node.count} 次 · 连着 ${related.length} 个词`,
+					: node.kind === 'note'
+						? `${subjectName.get(node.subject ?? '') ?? '笔记'} · ${node.count} 个考点`
+						: node.kind === 'subject'
+							? `408 科目 · 下面 ${node.notes.length} 篇笔记`
+							: `全站提到 ${node.count} 次 · 连着 ${related.length} 个词`,
 			),
 		);
 
-		if (node.posts.length) {
-			const list = document.createElement('ul');
-			for (const slug of node.posts) {
-				const li = document.createElement('li');
-				const a = document.createElement('a');
-				a.href = `/blog/${slug}/`;
-				a.textContent = titles.get(slug) ?? slug;
-				li.append(a);
-				list.append(li);
-			}
-			detail.append(list);
-		}
+		if (node.posts.length) detail.append(linkList(node.posts, '/blog/'));
+		if (node.kind !== 'note' && node.notes.length) detail.append(linkList(node.notes, '/notes/'));
 		if (node.projects.length) {
 			detail.append(el('p', 'meta', `出现在项目：${node.projects.join('、')}`));
 		}
@@ -102,7 +125,10 @@ function boot() {
 				li.append(b);
 				list.append(li);
 			}
-			detail.append(el('p', 'related-label', '连着这些词'), list);
+			detail.append(
+				el('p', 'related-label', node.kind === 'concept' ? '连着这些词' : '连着这些节点'),
+				list,
+			);
 		}
 	};
 
@@ -134,9 +160,19 @@ function boot() {
 		if (!target) return;
 		select(Number(target.dataset.nodeId));
 	});
+	// 降级平面图里可聚焦的是 SVG 的 <g>，它没有原生按钮行为，键盘得自己接
+	main.addEventListener('keydown', (event) => {
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		const target = (event.target as Element).closest<HTMLElement>('[data-node-id]');
+		if (!target) return;
+		event.preventDefault();
+		select(Number(target.dataset.nodeId));
+	});
 
-	// 默认选中连得最多的那个词：和服务端渲染出来的那块说明是同一个，无 JS 时也是它
-	select(hubId);
+	// 学习笔记页的考点标签用 ?label= 跳过来：按标签找点，因为 id 是构建时按顺序发的，正文一改就会挪位
+	const wanted = new URLSearchParams(location.search).get('label');
+	const initial = wanted ? graph.nodes.find((n) => n.label === wanted) : undefined;
+	select(initial?.id ?? hubId);
 
 	if (webglWorks()) {
 		// 动态 import：three.js 落在这个单独的 chunk 里，首屏 HTML 和首屏 JS 都不含它

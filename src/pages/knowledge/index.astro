@@ -7,13 +7,17 @@ import Footer from '../../components/Footer.astro';
 import Header from '../../components/Header.astro';
 import { SITE_TITLE } from '../../consts';
 
+type Kind = 'concept' | 'project' | 'note' | 'subject';
+
 type Node = {
 	id: number;
 	label: string;
-	kind: 'concept' | 'project';
+	kind: Kind;
 	count: number;
 	posts: string[];
+	notes: string[];
 	projects: string[];
+	subject?: string;
 	url?: string | null;
 	x: number;
 	y: number;
@@ -25,12 +29,16 @@ const graph = JSON.parse(
 ) as {
 	generatedAt: string;
 	posts: { slug: string; title: string }[];
+	notes: { slug: string; title: string; subject: string }[];
+	subjects: { key: string; name: string; notes: number }[];
 	nodes: Node[];
 	edges: { a: number; b: number; weight: number }[];
 };
 
-const byId = new Map(graph.nodes.map((n) => [n.id, n]));
-const titleOf = new Map(graph.posts.map((p) => [p.slug, p.title]));
+const titleOf = new Map<string, string>(
+	[...graph.posts, ...graph.notes].map((d) => [d.slug, d.title] as [string, string]),
+);
+const subjectOf = new Map(graph.subjects.map((s) => [s.key, s.name]));
 const degree = new Map<number, number>();
 graph.edges.forEach((e) => {
 	degree.set(e.a, (degree.get(e.a) ?? 0) + e.weight);
@@ -66,6 +74,23 @@ const concepts = graph.nodes
 	.filter((n) => n.kind === 'concept')
 	.sort((a, b) => deg(b) - deg(a) || b.count - a.count);
 const projectNodes = graph.nodes.filter((n) => n.kind === 'project');
+const noteNodes = graph.nodes.filter((n) => n.kind === 'note');
+const subjectNodes = graph.nodes.filter((n) => n.kind === 'subject');
+
+const KIND_LABEL: Record<Kind, string> = {
+	concept: '概念',
+	project: '项目',
+	note: '学习笔记',
+	subject: '408 科目',
+};
+const metaOf = (n: Node) => {
+	if (n.kind === 'project') return '首页挂着的项目条目';
+	if (n.kind === 'note')
+		return `${subjectOf.get(n.subject ?? '') ?? '笔记'} · ${n.count} 个考点`;
+	if (n.kind === 'subject') return `408 科目 · 下面 ${n.notes.length} 篇笔记`;
+	return `全站提到 ${n.count} 次 · 连着 ${neighbors(n.id).length} 个词`;
+};
+const hrefOf = (slug: string) => (graph.notes.some((d) => d.slug === slug) ? `/notes/${slug}/` : `/blog/${slug}/`);
 ---
 
 <html lang="zh-CN">
@@ -153,10 +178,25 @@ const projectNodes = graph.nodes.filter((n) => n.kind === 'project');
 			.flat .node.project {
 				fill: var(--accent);
 			}
+			.flat .node.note {
+				fill: #2e6b63;
+			}
+			.flat .node.subject {
+				fill: #7a6a2f;
+			}
 			.flat .tag {
 				font-family: var(--font-mono);
 				font-size: 7px;
 				fill: rgba(23, 22, 26, 0.72);
+			}
+			/* 降级版也得能用键盘走：SVG 的 <g> 上 tabindex，焦点画在点上 */
+			.flat .pick {
+				cursor: pointer;
+				outline: none;
+			}
+			.flat .pick:focus-visible circle {
+				stroke: var(--accent);
+				stroke-width: 2.5;
 			}
 			.legend {
 				display: flex;
@@ -178,6 +218,12 @@ const projectNodes = graph.nodes.filter((n) => n.kind === 'project');
 			}
 			.legend i.p {
 				background: var(--accent);
+			}
+			.legend i.n {
+				background: #2e6b63;
+			}
+			.legend i.s {
+				background: #7a6a2f;
 			}
 			.hint {
 				position: absolute;
@@ -314,6 +360,28 @@ const projectNodes = graph.nodes.filter((n) => n.kind === 'project');
 				font-size: 1rem;
 				color: rgb(var(--gray));
 			}
+			.column h3 a {
+				color: inherit;
+				text-decoration: none;
+				border-bottom: 1px solid var(--border);
+			}
+			.column h3 a:hover {
+				color: var(--accent);
+			}
+			/* 还没写笔记的科目不给按钮：图里没有它的点，点了也没反应 */
+			.kb :global(.empty-chip) {
+				display: inline-block;
+				padding: 0.2em 0.62em;
+				border: 1px dashed var(--border);
+				border-radius: 999px;
+				font-size: 0.84rem;
+				color: rgb(var(--gray));
+				text-decoration: none;
+			}
+			.kb :global(.empty-chip:hover) {
+				border-color: var(--accent);
+				color: var(--accent-dark);
+			}
 			.how {
 				margin-top: 3em;
 				padding-top: 1.6em;
@@ -344,18 +412,24 @@ const projectNodes = graph.nodes.filter((n) => n.kind === 'project');
 		<main class="kb">
 			<div class="title">
 				<p class="kicker" data-reveal style="--rd:60ms">
-					{graph.nodes.length} 个术语 · {graph.edges.length} 条关系
+					{graph.nodes.length} 个节点 · {graph.edges.length} 条关系
 				</p>
 				<h1 data-mask data-reveal style="--rd:140ms">知识库</h1>
 				<p class="lede" data-reveal style="--rd:260ms">
-					这张图不是手画的。构建脚本扫过每一篇已发布的文章和首页的项目条目，把反复出现的技术术语抽成节点，
+					这张图不是手画的。构建脚本扫过每一篇已发布的文章、学习笔记和首页的项目条目，把反复出现的技术术语抽成节点，
 					再把「同一篇文章里一起出现过」连成边——所以它反映的是我实际写下来的东西，不是我打算学什么。
 				</p>
 				<hr class="rule" data-reveal="grow" style="--rd:340ms" />
 			</div>
 
 			<div class="stage" data-stage>
-				<svg class="flat" viewBox={`0 0 ${W} ${W}`} preserveAspectRatio="xMidYMid meet" role="img">
+				<svg
+					class="flat"
+					viewBox={`0 0 ${W} ${W}`}
+					preserveAspectRatio="xMidYMid meet"
+					role="group"
+					aria-label="概念图的平面版本，里面的点可以选"
+				>
 					<title>概念图的平面版本（按构建时算好的坐标绘制）</title>
 					{
 						graph.edges.map((e) => {
@@ -377,9 +451,15 @@ const projectNodes = graph.nodes.filter((n) => n.kind === 'project');
 						graph.nodes.map((n) => {
 							const p = pts.get(n.id)!;
 							return (
-								<g data-node-id={n.id}>
+								<g
+									data-node-id={n.id}
+									class="pick"
+									role="button"
+									tabindex="0"
+									aria-label={`${n.label}，${KIND_LABEL[n.kind]}`}
+								>
 									<circle
-										class={`node${n.kind === 'project' ? ' project' : ''}`}
+										class={`node${n.kind === 'concept' ? '' : ` ${n.kind}`}`}
 										cx={p.sx}
 										cy={p.sy}
 										r={(1.6 + Math.min(deg(n), 14) * 0.22).toFixed(2)}
@@ -402,6 +482,8 @@ const projectNodes = graph.nodes.filter((n) => n.kind === 'project');
 			<div class="legend" data-reveal>
 				<span><i></i>文章里的概念</span>
 				<span><i class="p"></i>项目</span>
+				<span><i class="n"></i>学习笔记</span>
+				<span><i class="s"></i>408 科目</span>
 				<span>点越大 = 连得越多 · 线越粗 = 在同几篇里反复共现</span>
 			</div>
 
@@ -431,6 +513,47 @@ const projectNodes = graph.nodes.filter((n) => n.kind === 'project');
 							))
 						}
 					</ul>
+					{
+						(noteNodes.length > 0 || subjectNodes.length > 0) && (
+							<>
+								<h3>
+									<a href="/notes/">学习笔记</a>
+								</h3>
+								<ul class="chips" data-chips>
+									{
+										noteNodes.map((n) => (
+											<li>
+												<button type="button" data-node-id={n.id} aria-current={n.id === selected.id}>
+													{n.label}
+												</button>
+											</li>
+										))
+									}
+								</ul>
+								<h3>408 科目</h3>
+								<ul class="chips" data-chips>
+									{
+										[...graph.subjects].map((s) => {
+											const node = subjectNodes.find((n) => n.label === s.name);
+											return (
+												<li>
+													{node ? (
+														<button type="button" data-node-id={node.id} aria-current={node.id === selected.id}>
+															{s.name}
+														</button>
+													) : (
+														<a class="empty-chip" href="/notes/">
+															{s.name}（还没写）
+														</a>
+													)}
+												</li>
+											);
+										})
+									}
+								</ul>
+							</>
+						)
+					}
 					<div class="how">
 						<h2>这张图是怎么来的</h2>
 						<p>
@@ -439,32 +562,39 @@ const projectNodes = graph.nodes.filter((n) => n.kind === 'project');
 							带版本号或点划线的写法才算术语，全站只提一次的普通词扔掉（全大写缩写和首页标签除外）。
 						</p>
 						<p>
+							408 那部分走的是另一条规则：笔记的考点是自己在 frontmatter 里声明的，但脚本会回正文里查一遍，
+							正文没出现过的词不进图，免得我标了「拥塞控制」其实一个字没写。科目节点只在这一科真的有笔记时才画出来——
+							没写的科目在<a href="/notes/">学习笔记</a>页里是空的，不会在这张图上假装存在。
+						</p>
+						<p>
 							坐标用斐波那契球面均布，构建时算死，前端不做力导向布局——所以刷新不会跳位，代价是位置本身没有含义，
 							它只是把点摊开。想改图就改规则重跑，别手改 <code>src/data/knowledge.json</code>。
 						</p>
-						<p>生成于 {graph.generatedAt}，共 {graph.posts.length} 篇文章、{graph.nodes.length} 个节点。</p>
+						<p>
+							生成于 {graph.generatedAt}，共 {graph.posts.length} 篇文章、{graph.notes.length} 篇笔记、
+							{graph.nodes.length} 个节点。
+						</p>
 					</div>
 				</div>
 
 				<aside class="detail" data-detail aria-live="polite">
-					<p class="kind">{selected.kind === 'project' ? '项目' : '概念'}</p>
+					<p class="kind">{KIND_LABEL[selected.kind]}</p>
 					<p class="name">{selected.label}</p>
-					<p class="meta">
-						{
-							selected.kind === 'project'
-								? '首页挂着的项目条目'
-								: `全站提到 ${selected.count} 次 · 连着 ${neighbors(selected.id).length} 个词`
-						}
-					</p>
+					<p class="meta">{metaOf(selected)}</p>
 					{
-						selected.posts.length > 0 && (
+						selected.posts.length + selected.notes.length > 0 && (
 							<ul>
-								{selected.posts.map((slug) => (
+								{[...selected.posts, ...selected.notes].map((slug) => (
 									<li>
-										<a href={`/blog/${slug}/`}>{titleOf.get(slug) ?? slug}</a>
+										<a href={hrefOf(slug)}>{titleOf.get(slug) ?? slug}</a>
 									</li>
 								))}
 							</ul>
+						)
+					}
+					{
+						selected.kind === 'subject' && (
+							<a href="/notes/">学习笔记页 ↗</a>
 						)
 					}
 					{

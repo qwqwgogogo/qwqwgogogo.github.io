@@ -1,0 +1,186 @@
+---
+import { type CollectionEntry, getCollection, render } from 'astro:content';
+import Ambient from '../../components/Ambient.astro';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import FormattedDate from '../../components/FormattedDate.astro';
+import Header from '../../components/Header.astro';
+import { subjectName } from '../../data/subjects.mjs';
+
+export async function getStaticPaths() {
+	const notes = await getCollection('notes');
+	return notes.map((note) => ({
+		params: { slug: note.id },
+		props: note,
+	}));
+}
+type Props = CollectionEntry<'notes'>;
+
+const note = Astro.props;
+const { Content } = await render(note);
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<BaseHead title={note.data.title} description={note.data.description} />
+		<style>
+			main {
+				width: calc(100% - 2em);
+				max-width: 100%;
+				margin: 0;
+			}
+			.prose {
+				width: 720px;
+				max-width: calc(100% - 2em);
+				margin: auto;
+				padding: 1em;
+				color: #33312c;
+			}
+			.title {
+				margin-bottom: 1.6em;
+				padding: clamp(2.5rem, 8vh, 4.5rem) 0 1em;
+				text-align: left;
+				line-height: 1.24;
+			}
+			.meta {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: baseline;
+				gap: 0.9rem;
+				margin-bottom: 0.7em;
+				font-family: var(--font-mono);
+				font-size: 0.78rem;
+				letter-spacing: 0.08em;
+			}
+			.subject {
+				padding: 0.15em 0.6em;
+				border: 1px solid rgba(122, 106, 47, 0.4);
+				border-radius: 999px;
+				color: #7a6a2f;
+				letter-spacing: 0.04em;
+			}
+			.subject:hover {
+				border-color: #7a6a2f;
+			}
+			.meta :global(time) {
+				color: var(--accent);
+			}
+			.title h1 {
+				margin: 0 0 0.5em;
+				font-family: var(--font-serif-cjk);
+				font-size: clamp(1.85rem, 4.4vw, 2.7rem);
+				letter-spacing: -0.012em;
+			}
+			.rule {
+				border: none;
+				height: 1px;
+				margin: 0;
+				background: var(--rule);
+			}
+			.tags {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.4rem;
+				margin: 0 0 2.2em;
+				padding: 0;
+				list-style: none;
+			}
+			.tags a {
+				padding: 0.18em 0.66em;
+				border: 1px solid var(--border);
+				border-radius: 999px;
+				font-family: var(--font-mono);
+				font-size: 0.75rem;
+				color: rgb(var(--gray));
+				text-decoration: none;
+				transition:
+					color 0.3s var(--e-out),
+					border-color 0.3s var(--e-out);
+			}
+			.tags a:hover {
+				color: var(--accent);
+				border-color: var(--accent);
+			}
+			.prose :global(h2) {
+				padding-top: 0.4em;
+			}
+			.prose :global(table) {
+				display: block;
+				overflow-x: auto;
+				margin: 0 0 2em;
+				border-collapse: collapse;
+				font-size: 0.92rem;
+			}
+			.prose :global(th),
+			.prose :global(td) {
+				padding: 0.5em 0.8em;
+				border: 1px solid var(--border);
+				text-align: left;
+			}
+			.prose :global(th) {
+				background: var(--bg-deep);
+				font-weight: 600;
+			}
+			.prose :global(img) {
+				box-shadow: 0 22px 46px -28px rgba(23, 22, 26, 38%);
+			}
+			.back {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 1.2rem;
+				margin: 3.2em 0 0;
+				padding-top: 1.4em;
+				border-top: 1px solid var(--rule);
+				font-size: 0.9rem;
+			}
+			.back a {
+				text-decoration: none;
+				color: rgb(var(--gray));
+				border-bottom: 1px solid var(--border);
+			}
+			.back a:hover {
+				color: var(--accent);
+				border-color: var(--accent);
+			}
+		</style>
+	</head>
+
+	<body>
+		<Ambient />
+		<Header />
+		<main>
+			<article>
+				<div class="prose">
+					<div class="title">
+						<div class="meta" data-reveal style="--rd:60ms">
+							<a class="subject" href="/notes/">{subjectName(note.data.subject)}</a>
+							<FormattedDate date={note.data.pubDate} />
+						</div>
+						<h1 data-mask data-reveal style="--rd:140ms">{note.data.title}</h1>
+						<hr class="rule" data-reveal="grow" style="--rd:260ms" />
+					</div>
+					{
+						note.data.tags.length > 0 && (
+							<ul class="tags" data-reveal style="--rd:300ms">
+								{note.data.tags.map((tag) => (
+									<li>
+										<a href={`/knowledge/?label=${encodeURIComponent(tag)}`}>{tag}</a>
+									</li>
+								))}
+							</ul>
+						)
+					}
+					<div data-reveal style="--rd:340ms">
+						<Content />
+					</div>
+					<div class="back">
+						<a href="/notes/">← 回到 {subjectName(note.data.subject)}</a>
+						<a href="/knowledge/">在知识图谱里看这些词 ↗</a>
+					</div>
+				</div>
+			</article>
+		</main>
+		<Footer />
+	</body>
+</html>

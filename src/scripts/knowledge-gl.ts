@@ -8,11 +8,13 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 export type GraphNode = {
 	id: number;
 	label: string;
-	kind: 'concept' | 'project';
+	kind: 'concept' | 'project' | 'note' | 'subject';
 	count: number;
 	posts: string[];
+	notes: string[];
 	projects: string[];
 	url?: string | null;
+	subject?: string;
 	x: number;
 	y: number;
 	z: number;
@@ -20,14 +22,25 @@ export type GraphNode = {
 
 export type Graph = {
 	posts: { slug: string; title: string }[];
+	notes: { slug: string; title: string; subject: string }[];
+	subjects: { key: string; name: string; notes: number }[];
 	nodes: GraphNode[];
 	edges: { a: number; b: number; weight: number }[];
 };
 
 const INK = 0x2b2823;
 const RUST = 0xbf3f26;
+const TEAL = 0x2e6b63; // 笔记
+const OLIVE = 0x7a6a2f; // 408 科目
 const FADED = 0xa9a294;
-const HUB = 5; // 连接数到这个级别的才一直挂标签，否则 44 个标签糊成一片
+const HUB = 5; // 连接数到这个级别的才一直挂标签，否则几十个标签糊成一片
+
+const COLOR: Record<GraphNode['kind'], number> = {
+	concept: INK,
+	project: RUST,
+	note: TEAL,
+	subject: OLIVE,
+};
 
 export type GlHandle = {
 	dispose: () => void;
@@ -89,7 +102,7 @@ export function mountGraph(
 		const dpr = Math.min(window.devicePixelRatio || 1, 2);
 		const c = document.createElement('canvas');
 		const ctx = c.getContext('2d')!;
-		const font = `600 ${size}px ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, monospace`;
+		const font = `600 ${size}px ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Microsoft YaHei UI', 'PingFang SC', 'Noto Sans SC', sans-serif`;
 		ctx.font = font;
 		const w = Math.ceil(ctx.measureText(text).width + 8);
 		const h = Math.ceil(size * 1.7);
@@ -109,13 +122,13 @@ export function mountGraph(
 	for (const node of graph.nodes) {
 		const d = degree.get(node.id) ?? 0;
 		const radius = 2.4 + Math.sqrt(d) * 1.5;
-		const color = node.kind === 'project' ? RUST : INK;
+		const color = COLOR[node.kind];
 		const material = new THREE.MeshStandardMaterial({
 			color,
 			roughness: 0.55,
 			metalness: 0,
 			emissive: color,
-			emissiveIntensity: node.kind === 'project' ? 0.22 : 0.1,
+			emissiveIntensity: node.kind === 'concept' ? 0.1 : 0.2,
 			transparent: true,
 		});
 		const mesh = new THREE.Mesh(sphere, material);
@@ -140,7 +153,7 @@ export function mountGraph(
 			scene.add(halo);
 			view.halo = halo;
 		}
-		const size = node.kind === 'project' ? 30 : 24;
+		const size = node.kind === 'concept' ? 24 : 30;
 		const { tex, aspect, height } = makeLabel(node.label, size);
 		const label = new THREE.Sprite(
 			new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0 }),
@@ -204,7 +217,7 @@ export function mountGraph(
 			const isSel = v.node.id === selectedId;
 			const isHot = v.node.id === hoveredId;
 			const inSet = isSel || isHot || near.has(v.node.id);
-			const target = inSet ? (v.node.kind === 'project' ? RUST : INK) : FADED;
+			const target = inSet ? COLOR[v.node.kind] : FADED;
 			v.mesh.material.color.setHex(target);
 			v.mesh.material.emissive.setHex(target);
 			v.mesh.material.opacity = inSet ? 1 : 0.42;
