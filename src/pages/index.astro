@@ -15,26 +15,30 @@ const projects = [
 	{
 		name: '小豚 · 武汉 SPU 城市 AI 接待员',
 		desc: '纯静态、离线可用、句句有出处的城市 AI 接待员。SAIG 数命 SPU 国际 AI 大赛参赛作品。',
-		tags: ['TypeScript', '静态站'],
+		tags: 'TypeScript · 静态站',
+		year: '2026',
 		url: 'https://github.com/qwqwgogogo/xiaotun-wuhan-src',
 		secondary: { label: '在线演示', url: 'https://qwqwgogogo.github.io/xiaotun-wuhan/' },
 	},
 	{
 		name: 'Ollama Model Manager',
-		desc: 'Windows 桌面应用：实时显示 GPU / CPU 显存占用，加载模型前先预估资源影响，并按硬件推荐最合适的模型。',
-		tags: ['Python', '桌面应用'],
+		desc: 'Windows 桌面应用：实时显示 GPU / CPU 显存占用，加载模型前先预估资源影响，并按硬件推荐最合适的模型。已打 Windows 可执行文件发 Release。',
+		tags: 'Python · 桌面应用',
+		year: '2026',
 		url: 'https://github.com/qwqwgogogo/Ollama-Model-Manager',
 		secondary: { label: '下载 exe', url: 'https://github.com/qwqwgogogo/Ollama-Model-Manager/releases/latest' },
 	},
 	{
 		name: 'SWEF-AT',
 		desc: '稳定性加权的集成特征过滤方法：融合六个异构过滤器打分，再用自适应拐点自动确定保留特征数。论文源码与复现脚本。',
-		tags: ['Python', '研究复现'],
+		tags: 'Python · 研究复现',
+		year: '2025',
 		url: 'https://github.com/qwqwgogogo/SWEF-AT',
 	},
 ];
 
 const handle = 'qwqwgogogo';
+const [first, ...rest] = projects;
 ---
 
 <!doctype html>
@@ -47,85 +51,64 @@ const handle = 'qwqwgogogo';
 		<Header />
 		<main>
 			<section class="hero" data-glow>
-				<p class="eyebrow" data-reveal style="--rd:120ms">
+				<p class="who" data-reveal style="--rd:100ms">
 					<span data-scramble="700">@{handle}</span>
-					<span class="sep" aria-hidden="true">/</span>
+					<span class="sep" aria-hidden="true">—</span>
 					<span>个人站</span>
 				</p>
-				<h1 class="name" data-reveal="chars">
-					{
-						[...SITE_TITLE].map(
-							(ch, i) =>
-								<span class="ch" style={`--rd:${180 + i * 70}ms`}>
-									{ch}
-								</span>,
-						)
-					}
-				</h1>
-				<p class="lede" data-mask data-reveal style="--rd:560ms">
+				<h1 class="stmt" data-mask data-reveal style="--rd:180ms">
 					{SITE_DESCRIPTION}
+				</h1>
+				<p class="now" data-reveal style="--rd:420ms">
+					手上三个项目：<a class="sweep" href={first.secondary?.url ?? first.url}>{first.name.split(' · ')[0]}</a>、<a
+						class="sweep"
+						href={rest[0].url}>{rest[0].name}</a> 和 <a class="sweep" href={rest[1].url}>{rest[1].name}</a>；不定期写的笔记都在<a
+						class="sweep"
+						href="/blog/">文章</a>里。
 				</p>
-				<div class="cta" data-reveal data-stagger style="--rd:720ms">
-					<a class="btn primary" href="/blog/" data-magnetic="7">看文章</a>
-					<a class="btn" href="https://github.com/qwqwgogogo" data-magnetic="7">
-						GitHub
-					</a>
-					<a class="btn" href="/rss.xml" data-magnetic="7">RSS</a>
-				</div>
-				<p class="meta" data-reveal style="--rd:880ms">
+				<p class="meta" data-reveal style="--rd:560ms">
 					{projects.length} 个作品 · {posts.length} 篇文章 · 最近更新
 					{' '}
 					<FormattedDate date={posts[0]?.data.pubDate ?? new Date()} />
 				</p>
-				<div class="cue" data-scroll-cue aria-hidden="true"><i></i></div>
 			</section>
 
-			<section class="block">
-				<h2 class="label" data-mask data-reveal>作品</h2>
-				<div class="grid" data-stagger data-stagger-step="110">
+			<section class="sec">
+				<h2 class="sec-t"><span data-mask data-reveal>作品</span><i class="mono">Selected work</i></h2>
+				<ol class="rows">
 					{
 						projects.map((p, i) => (
-							<div data-reveal>
-								<article class="card" data-spotlight data-tilt="7">
-									<span class="idx">{String(i + 1).padStart(2, '0')}</span>
+							<li data-reveal data-spotlight>
+								<span class="n">{String(i + 1).padStart(2, '0')}</span>
+								<div class="body">
 									<h3>
-										<a href={p.url} class="sweep">
-											{p.name}
-										</a>
+										<a href={p.url}>{p.name}</a>
 									</h3>
 									<p>{p.desc}</p>
-									<div class="tags">
-										{p.tags.map((t) => <span>{t}</span>)}
-									</div>
-									<div class="foot">
-										{
-											p.secondary && (
-												<a class="demo" href={p.secondary.url}>
-													{p.secondary.label}
-													<i aria-hidden="true">→</i>
-												</a>
-											)
-										}
-										<a class="repo" href={p.url}>
-											仓库<i aria-hidden="true">→</i>
-										</a>
-									</div>
-								</article>
-							</div>
+									<span class="tags">{p.tags}</span>
+								</div>
+								<div class="side">
+									{p.secondary && <a href={p.secondary.url}>{p.secondary.label}</a>}
+									<a href={p.url}>仓库</a>
+									<span class="yr">{p.year}</span>
+								</div>
+							</li>
 						))
 					}
-				</div>
+				</ol>
 			</section>
 
-			<section class="block">
-				<h2 class="label" data-mask data-reveal>最新文章</h2>
-				<ul class="post-list" data-stagger>
+			<section class="sec">
+				<h2 class="sec-t"><span data-mask data-reveal>文章</span><i class="mono">Latest notes</i></h2>
+				<ul class="notes">
 					{
 						posts.slice(0, 4).map((post) => (
-							<li data-reveal>
+							<li data-reveal data-spotlight>
 								<a href={`/blog/${post.id}/`}>
-									<span class="row-title">{post.data.title}</span>
-									<FormattedDate date={post.data.pubDate} />
+									<span class="t">{post.data.title}</span>
+									<span class="d">
+										<FormattedDate date={post.data.pubDate} />
+									</span>
 								</a>
 							</li>
 						))
@@ -142,325 +125,222 @@ const handle = 'qwqwgogogo';
 
 <style>
 	main {
-		width: 1180px;
+		width: 1040px;
 		max-width: calc(100% - 2.5em);
+		margin: auto;
 		padding: 0 1.25em;
 	}
 
-	/* ---------- hero ---------- */
+	/* ---------- hero：一句话当主视觉，链接嵌在句子里 ---------- */
 	.hero {
 		position: relative;
-		padding: clamp(5rem, 13vh, 9rem) 0 clamp(4rem, 9vh, 6rem);
+		padding: clamp(6rem, 17vh, 11rem) 0 clamp(3.5rem, 8vh, 5rem);
 		overflow: clip;
 	}
-	.eyebrow {
+	.who {
 		display: flex;
 		align-items: center;
-		gap: 0.6em;
-		margin: 0 0 1.4rem;
+		gap: 0.55em;
+		margin: 0 0 clamp(1.6rem, 4vh, 2.6rem);
 		font-family: var(--font-mono);
-		font-size: 0.85rem;
-		letter-spacing: 0.16em;
-		text-transform: lowercase;
+		font-size: 0.8rem;
+		letter-spacing: 0.14em;
 		color: var(--accent);
 	}
-	.eyebrow .sep {
+	.who .sep,
+	.who span:last-child {
 		color: rgb(var(--gray));
+		letter-spacing: 0.04em;
 	}
-	.eyebrow span:last-child {
-		color: rgb(var(--gray));
-	}
-	.name {
+	.stmt {
 		margin: 0;
-		font-size: clamp(4.5rem, 17vw, 11rem);
-		line-height: 0.9;
-		letter-spacing: -0.055em;
+		max-width: 15em;
+		font-family: var(--font-serif-cjk);
+		font-size: clamp(2.3rem, 6.4vw, 4.4rem);
+		font-weight: 700;
+		line-height: 1.26;
+		letter-spacing: -0.012em;
+		color: rgb(var(--black));
 	}
-	/* 每个 .ch 是独立的背景裁剪盒，所以渐变必须是纵向的：
-	   字高一致 → 每个字的色带完全对齐，横向渐变会一字一色。 */
-	.name :global(.ch) {
-		background: linear-gradient(
-			175deg,
-			#f4f6fc 0%,
-			#d3dbf2 32%,
-			var(--accent) 62%,
-			#67e8f9 100%
-		);
-		background-size: 100% 230%;
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
-		animation: sheen 7.5s var(--e-io) infinite alternate;
-	}
-	@keyframes sheen {
-		from {
-			background-position: 50% 0%;
-		}
-		to {
-			background-position: 50% 100%;
-		}
-	}
-	.lede {
-		max-width: 32em;
-		margin: 1.6rem 0 2.6rem;
-		font-size: clamp(1.15rem, 2.2vw, 1.5rem);
-		line-height: 1.55;
+	.now {
+		max-width: 46ch;
+		margin: clamp(1.8rem, 4vh, 2.6rem) 0 0;
+		font-size: 1.08rem;
+		line-height: 1.85;
 		color: rgb(var(--gray));
 	}
-	.cta {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.7rem;
-	}
-	.btn {
-		display: inline-block;
-		padding: 0.62em 1.5em;
-		border: 1px solid var(--border);
-		border-radius: 999px;
-		background: var(--surface);
+	.now a {
 		color: rgb(var(--black));
-		font-size: 1rem;
-		text-decoration: none;
 	}
-	.btn:hover {
-		border-color: rgba(165, 180, 252, 50%);
-		color: var(--accent);
-	}
-	.btn.primary {
-		background: linear-gradient(120deg, var(--accent-dark), #a5b4fc);
-		border-color: transparent;
-		color: #0a0c11;
-		font-weight: 700;
-		box-shadow: 0 10px 30px -12px rgba(129, 140, 248, 60%);
-	}
-	.btn.primary:hover {
-		color: #0a0c11;
-		filter: brightness(1.08);
+	.now a:hover {
+		color: var(--accent-dark);
 	}
 	.meta {
 		margin: 2.2rem 0 0;
 		font-family: var(--font-mono);
-		font-size: 0.82rem;
-		letter-spacing: 0.04em;
-		color: rgba(var(--gray), 75%);
+		font-size: 0.78rem;
+		letter-spacing: 0.05em;
+		color: rgba(var(--gray), 85%);
 	}
 	.meta :global(time) {
-		color: var(--accent);
-	}
-	.cue {
-		position: absolute;
-		left: 0;
-		bottom: 1.2rem;
-		width: 42px;
-		height: 42px;
-		opacity: 0.7;
-		transition: opacity 0.5s var(--e-out);
-	}
-	.cue.is-gone {
-		opacity: 0;
-	}
-	.cue i {
-		position: absolute;
-		left: 0;
-		top: 0;
-		width: 1px;
-		height: 42px;
-		background: linear-gradient(
-			to bottom,
-			transparent,
-			var(--accent) 40%,
-			transparent
-		);
-		animation: fall 2.2s var(--e-io) infinite;
-	}
-	@keyframes fall {
-		0% {
-			transform: translateY(-14px);
-			opacity: 0;
-		}
-		35% {
-			opacity: 1;
-		}
-		100% {
-			transform: translateY(22px);
-			opacity: 0;
-		}
-	}
-
-	/* ---------- 区块：左侧标签 + 右侧内容 ---------- */
-	.block {
-		display: grid;
-		grid-template-columns: 190px minmax(0, 1fr);
-		gap: 2.5rem;
-		align-items: start;
-		padding: 3.2rem 0;
-		border-top: 1px solid var(--border);
-	}
-	.label {
-		position: sticky;
-		top: 6rem;
-		margin: 0;
-		font-family: var(--font-mono);
-		font-size: 0.82rem;
-		font-weight: 400;
-		letter-spacing: 0.16em;
-		color: rgb(var(--gray));
-	}
-	.label::before {
-		content: '';
-		display: block;
-		width: 26px;
-		height: 2px;
-		margin-bottom: 0.7rem;
-		background: linear-gradient(90deg, var(--accent), transparent);
-	}
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
-		gap: 1.1rem;
-	}
-
-	/* ---------- 卡片 ---------- */
-	.card {
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		height: 100%;
-		padding: 1.5rem;
-		border: 1px solid var(--border);
-		border-radius: 16px;
-		background-color: rgba(18, 21, 29, 78%);
-		--lift: 0px;
-	}
-	.card:hover {
-		--lift: -4px;
-	}
-	.card:hover .idx {
-		color: var(--accent);
-	}
-	.idx {
-		font-family: var(--font-mono);
-		font-size: 0.78rem;
-		letter-spacing: 0.1em;
-		color: rgba(var(--gray), 60%);
-		transition: color 0.4s var(--e-out);
-	}
-	.card h3 {
-		margin: 0.55rem 0 0.6rem;
-		font-size: 1.2rem;
-		line-height: 1.35;
-	}
-	.card h3 a {
 		color: rgb(var(--black));
 	}
-	.card h3 a:hover {
-		color: var(--accent);
+
+	/* ---------- 区块 ---------- */
+	.sec {
+		padding: clamp(2.6rem, 6vh, 3.6rem) 0;
+		border-top: 1px solid var(--rule);
 	}
-	.card p {
-		flex: 1;
-		margin: 0 0 1rem;
-		font-size: 0.95rem;
-		line-height: 1.65;
-		color: rgb(var(--gray));
-	}
-	.tags {
+	.sec-t {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem;
+		align-items: baseline;
+		gap: 1em;
+		margin: 0 0 1.6rem;
+		font-family: var(--font-serif-cjk);
+		font-size: 1.35rem;
+		font-weight: 700;
 	}
-	.tags span {
-		padding: 0.14em 0.7em;
-		border-radius: 999px;
-		background: rgba(165, 180, 252, 9%);
-		color: var(--accent);
+	.sec-t .mono {
 		font-family: var(--font-mono);
-		font-size: 0.74rem;
-		letter-spacing: 0.03em;
-	}
-	.foot {
-		display: flex;
-		align-items: center;
-		justify-content: flex-end;
-		gap: 1rem;
-		margin-top: 1.1rem;
-		padding-top: 1rem;
-		border-top: 1px dashed rgba(30, 36, 49, 100%);
-		font-size: 0.88rem;
-	}
-	.foot a {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35em;
-		text-decoration: none;
-		color: rgb(var(--gray));
-		transition: color 0.3s var(--e-out);
-	}
-	.foot a:hover {
-		color: var(--accent);
-	}
-	.foot .repo {
-		font-family: var(--font-mono);
-		font-size: 0.8rem;
-		letter-spacing: 0.06em;
-	}
-	.foot i {
+		font-size: 0.72rem;
 		font-style: normal;
-		transition: transform 0.4s var(--e-expo);
-	}
-	.foot a:hover i {
-		transform: translateX(4px);
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: rgba(var(--gray), 75%);
 	}
 
-	/* ---------- 文章行 ---------- */
-	.post-list {
+	/* ---------- 作品行 ---------- */
+	.rows,
+	.notes {
 		list-style: none;
 		margin: 0;
 		padding: 0;
 	}
-	.post-list li {
-		position: relative;
-		border-bottom: 1px solid var(--border);
+	.rows li {
+		display: grid;
+		grid-template-columns: 46px minmax(0, 1fr) 150px;
+		gap: 1.4rem;
+		align-items: start;
+		padding: 1.5rem 0.9rem 1.5rem 0;
+		border-top: 1px solid var(--rule);
 	}
-	.post-list a {
+	.rows li:first-child {
+		border-top: none;
+	}
+	.rows .n {
+		font-family: var(--font-display);
+		font-size: 1.6rem;
+		font-weight: 400;
+		line-height: 1.1;
+		color: var(--accent);
+		font-variant-numeric: tabular-nums;
+	}
+	.rows h3 {
+		margin: 0;
+		font-size: 1.3rem;
+		line-height: 1.4;
+	}
+	.rows h3 a {
+		color: rgb(var(--black));
+		text-decoration: none;
+		background-image: linear-gradient(var(--accent), var(--accent));
+		background-size: 0% 1px;
+		background-position: 0 100%;
+		background-repeat: no-repeat;
+		transition: background-size 0.5s var(--e-expo);
+	}
+	.rows h3 a:hover {
+		background-size: 100% 1px;
+	}
+	.rows p {
+		max-width: 62ch;
+		margin: 0.5rem 0 0;
+		font-size: 0.98rem;
+		line-height: 1.8;
+		color: rgb(var(--gray));
+	}
+	.rows .tags {
+		display: block;
+		margin-top: 0.7rem;
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		letter-spacing: 0.06em;
+		color: rgba(var(--gray), 72%);
+	}
+	.rows .side {
+		display: grid;
+		gap: 0.45rem;
+		justify-items: end;
+		padding-top: 0.2rem;
+	}
+	.rows .side a {
+		font-size: 0.86rem;
+		color: rgb(var(--gray));
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.rows .side a::after {
+		content: ' →';
+		color: rgba(var(--gray), 60%);
+		transition: color 0.3s var(--e-out);
+	}
+	.rows .side a:hover {
+		color: var(--accent-dark);
+	}
+	.rows .side a:hover::after {
+		color: var(--accent);
+	}
+	.rows .yr {
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		color: rgba(var(--gray), 60%);
+	}
+
+	/* ---------- 文章行 ---------- */
+	.notes li {
+		border-top: 1px solid var(--rule);
+	}
+	.notes li:first-child {
+		border-top: none;
+	}
+	.notes a {
 		display: flex;
 		align-items: baseline;
 		justify-content: space-between;
 		gap: 1.5em;
 		padding: 1rem 0.9rem;
-		border-radius: 10px;
-		font-size: 1.1rem;
+		font-size: 1.05rem;
 		color: rgb(var(--black));
 		text-decoration: none;
-		transition:
-			background-color 0.4s var(--e-out),
-			padding-left 0.4s var(--e-expo),
-			color 0.3s var(--e-out);
+		transition: padding-left 0.4s var(--e-expo);
 	}
-	.post-list a:hover {
-		background: rgba(165, 180, 252, 6%);
-		padding-left: 1.4rem;
-		color: var(--accent);
+	.notes a:hover {
+		padding-left: 1.3rem;
+		color: var(--accent-dark);
 	}
-	.post-list :global(time) {
+	.notes .d {
 		font-family: var(--font-mono);
-		font-size: 0.82rem;
+		font-size: 0.76rem;
 		color: rgba(var(--gray), 80%);
 		white-space: nowrap;
 	}
 	.more {
 		margin: 1.4rem 0 0;
+		font-size: 0.95rem;
 	}
 
-	@media (max-width: 900px) {
-		.block {
-			grid-template-columns: 1fr;
-			gap: 1.4rem;
-			padding: 2.4rem 0;
+	@media (max-width: 860px) {
+		.rows li {
+			grid-template-columns: 34px minmax(0, 1fr);
 		}
-		.label {
-			position: static;
+		.rows .side {
+			grid-column: 2;
+			justify-items: start;
+			grid-auto-flow: column;
+			gap: 1.1rem;
+			align-items: baseline;
 		}
-		.cue {
+		.rows .yr {
 			display: none;
 		}
 	}

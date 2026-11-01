@@ -3,76 +3,50 @@ const today = new Date();
 ---
 
 <footer data-reveal>
-	<div class="rule" aria-hidden="true"></div>
-	<p class="sign">&copy; {today.getFullYear()} qwqw.</p>
-	<div class="social-links">
-		<a href="/rss.xml">
-			<span class="sr-only">RSS 订阅</span>
-			<svg viewBox="0 0 16 16" aria-hidden="true" width="32" height="32">
-				<path
-					fill="currentColor"
-					d="M2.003 2.003a.99.99 0 0 0-.991.994L1 12.99a.991.991 0 0 0 .992.99h1.418A.991.991 0 0 0 4.4 12.99V3.004a.998.998 0 0 0-1.004-1.001H2.003zM5.09 3.004a.991.991 0 0 0-.991.995v8.002c.003.55.448.996.991.99h1.418c.547.005 9.404.005 9.404-4.996 0-5-8.857-4.996-8.857-4.996l-1.965-.001v-.002zm.494 1.496h1.403c0 4.5 4.5 5 4.5 5s.1 3.496-5.903 3.496V4.5z"
-				></path>
-			</svg>
-		</a>
-		<a href="https://github.com/qwqwgogogo">
-			<span class="sr-only">GitHub 主页</span>
-			<svg viewBox="0 0 16 16" aria-hidden="true" width="32" height="32">
-				<path
-					fill="currentColor"
-					d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"
-				></path>
-			</svg>
-		</a>
+	<div class="inner">
+		<p class="sign">&copy; {today.getFullYear()} qwqw</p>
+		<div class="links">
+			<a href="/rss.xml">RSS</a>
+			<a href="https://github.com/qwqwgogogo">GitHub</a>
+		</div>
 	</div>
 </footer>
 
 <style>
 	footer {
-		padding: 4em 1em 6em;
-		text-align: center;
+		padding: 5em 1em 6em;
 		color: rgb(var(--gray));
 	}
-	.rule {
-		width: 240px;
-		height: 1px;
-		margin: 0 auto 2em;
-		background: linear-gradient(90deg, transparent, var(--border), transparent);
+	.inner {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1em;
+		width: 1040px;
+		max-width: 100%;
+		margin: auto;
+		padding-top: 1.4rem;
+		border-top: 1px solid var(--rule);
 	}
 	.sign {
 		margin: 0;
 		font-family: var(--font-mono);
-		font-size: 0.82rem;
-		letter-spacing: 0.08em;
+		font-size: 0.78rem;
+		letter-spacing: 0.06em;
 	}
-	.social-links {
+	.links {
 		display: flex;
-		justify-content: center;
-		gap: 0.6em;
-		margin-top: 1.2em;
+		gap: 1.4rem;
 	}
-	.social-links a {
-		display: grid;
-		place-items: center;
-		width: 40px;
-		height: 40px;
-		border: 1px solid var(--border);
-		border-radius: 11px;
-		background: var(--surface);
+	.links a {
+		font-family: var(--font-mono);
+		font-size: 0.78rem;
+		letter-spacing: 0.06em;
+		color: rgba(var(--gray), 88%);
 		text-decoration: none;
-		color: rgb(var(--gray));
-		transition:
-			color 0.3s var(--e-out),
-			border-color 0.3s var(--e-out),
-			transform 0.35s var(--e-out);
+		transition: color 0.3s var(--e-out);
 	}
-	.social-links a:hover {
+	.links a:hover {
 		color: var(--accent);
-		border-color: rgba(165, 180, 252, 45%);
-		transform: translateY(-3px);
-	}
-	.social-links svg {
-		width: 20px;
-		height: 20px;
 	}
 </style>

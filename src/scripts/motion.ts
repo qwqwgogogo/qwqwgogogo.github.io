@@ -59,12 +59,12 @@ function setupReveal() {
 }
 
 /**
- * 指针驱动：--mx/--my 供光斑与发光边框使用，可选 tilt 与 magnetic。
+ * 指针驱动：--mx/--my 决定行级暖晕落在哪。
  * 一个 rAF 闸门，指针事件只记录不重排。
  */
 function setupPointer() {
 	if (!finePointer()) return;
-	const tracked = [...document.querySelectorAll<El>('[data-spotlight],[data-tilt],[data-magnetic]')];
+	const tracked = [...document.querySelectorAll<El>('[data-spotlight]')];
 	if (!tracked.length) return;
 
 	const pending = new Map<El, PointerEvent>();
@@ -81,35 +81,13 @@ function setupPointer() {
 	const paint = (el: El, event: PointerEvent) => {
 		const rect = el.getBoundingClientRect();
 		if (!rect.width || !rect.height) return;
-		const x = event.clientX - rect.left;
-		const y = event.clientY - rect.top;
-		el.style.setProperty('--mx', `${x.toFixed(1)}px`);
-		el.style.setProperty('--my', `${y.toFixed(1)}px`);
-		el.style.setProperty('--mp', `${Math.min(1, Math.max(0, x / rect.width)).toFixed(3)}`);
-
-		if (el.hasAttribute('data-tilt') && !reducedMotion()) {
-			const max = num(el.dataset.tilt, 6);
-			el.style.setProperty(
-				'--rx',
-				`${(-((y / rect.height) - 0.5) * max * 2).toFixed(2)}deg`,
-			);
-			el.style.setProperty(
-				'--ry',
-				`${(((x / rect.width) - 0.5) * max * 2).toFixed(2)}deg`,
-			);
-		}
-
-		if (el.hasAttribute('data-magnetic') && !reducedMotion()) {
-			const pull = num(el.dataset.magnetic, 6);
-			el.style.setProperty('--tx', `${(((x / rect.width) - 0.5) * pull * 2).toFixed(2)}px`);
-			el.style.setProperty('--ty', `${(((y / rect.height) - 0.5) * pull * 2).toFixed(2)}px`);
-		}
+		el.style.setProperty('--mx', `${(event.clientX - rect.left).toFixed(1)}px`);
+		el.style.setProperty('--my', `${(event.clientY - rect.top).toFixed(1)}px`);
 	};
 
 	const release = (el: El) => {
 		pending.delete(el);
 		el.classList.remove('is-hot');
-		for (const v of ['--rx', '--ry', '--tx', '--ty']) el.style.removeProperty(v);
 	};
 
 	for (const el of tracked) {
@@ -206,7 +184,6 @@ function setupScramble() {
 function setupScroll() {
 	const root = document.documentElement;
 	const layers = [...document.querySelectorAll<El>('[data-parallax]')];
-	const cue = document.querySelector<El>('[data-scroll-cue]');
 	let ticking = true;
 
 	const update = () => {
@@ -224,7 +201,6 @@ function setupScroll() {
 				el.style.setProperty('--py', `${(y * num(el.dataset.parallax, 0.1)).toFixed(2)}px`);
 			}
 		}
-		if (cue) cue.classList.toggle('is-gone', y > 40);
 	};
 
 	const onScroll = () => {

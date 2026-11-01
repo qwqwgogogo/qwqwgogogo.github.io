@@ -30,8 +30,8 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 				可能是我改过路径。从下面两个地方回去：
 			</p>
 			<div class="cta" data-reveal data-stagger style="--rd:460ms">
-				<a class="back" href="/" data-magnetic="7">首页</a>
-				<a class="back" href="/blog/" data-magnetic="7">文章</a>
+				<a class="back" href="/">首页</a>
+				<a class="back" href="/blog/">文章</a>
 			</div>
 		</main>
 		<Footer />
@@ -62,13 +62,13 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 		pointer-events: none;
 	}
 	.code::before {
-		color: var(--accent-dark);
-		mix-blend-mode: screen;
+		color: var(--accent);
+		mix-blend-mode: multiply;
 		animation: glitch-a 3.4s steps(2, end) infinite;
 	}
 	.code::after {
-		color: #67e8f9;
-		mix-blend-mode: screen;
+		color: #2f4a6d;
+		mix-blend-mode: multiply;
 		animation: glitch-b 4.2s steps(2, end) infinite;
 	}
 	@keyframes glitch-a {
@@ -113,8 +113,9 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 	}
 	h1 {
 		margin: 1.6rem 0 0.6rem;
+		font-family: var(--font-serif-cjk);
 		font-size: clamp(1.6rem, 4vw, 2.4rem);
-		letter-spacing: -0.03em;
+		letter-spacing: -0.012em;
 	}
 	.hint {
 		margin: 0;
@@ -122,20 +123,31 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 	}
 	.cta {
 		display: flex;
-		gap: 0.7rem;
+		gap: 1.6rem;
 		margin-top: 2rem;
 	}
 	.back {
-		padding: 0.6em 1.4em;
-		border: 1px solid var(--border);
-		border-radius: 999px;
-		background: var(--surface);
+		position: relative;
+		padding: 0.2em 0;
+		font-family: var(--font-mono);
+		font-size: 0.86rem;
+		letter-spacing: 0.06em;
 		color: rgb(var(--black));
 		text-decoration: none;
-		transition: border-color 0.3s var(--e-out);
 	}
-	.back:hover {
-		border-color: rgba(165, 180, 252, 50%);
-		color: var(--accent);
+	.back::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: -0.2em;
+		height: 1px;
+		background: var(--accent);
+		transform: scaleX(0.35);
+		transform-origin: left center;
+		transition: transform 0.45s var(--e-expo);
+	}
+	.back:hover::after {
+		transform: scaleX(1);
 	}
 </style>

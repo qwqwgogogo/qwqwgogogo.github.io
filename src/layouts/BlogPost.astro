@@ -27,31 +27,32 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 			.hero-image img {
 				display: block;
 				margin: 0 auto;
-				border-radius: 12px;
-				box-shadow: var(--box-shadow);
+				border-radius: 8px;
+				box-shadow: 0 22px 46px -28px rgba(23, 22, 26, 38%);
 			}
 			.prose {
 				width: 720px;
 				max-width: calc(100% - 2em);
 				margin: auto;
 				padding: 1em;
-				color: rgb(var(--gray-dark));
+				color: #33312c;
 			}
 			.title {
-				margin-bottom: 1.4em;
+				margin-bottom: 1.6em;
 				padding: clamp(2.5rem, 8vh, 4.5rem) 0 1em;
-				text-align: center;
-				line-height: 1.15;
+				text-align: left;
+				line-height: 1.24;
 			}
 			.title h1 {
 				margin: 0 0 0.5em 0;
-				font-size: clamp(1.9rem, 4.6vw, 2.9rem);
-				letter-spacing: -0.03em;
+				font-family: var(--font-serif-cjk);
+				font-size: clamp(1.85rem, 4.4vw, 2.7rem);
+				letter-spacing: -0.012em;
 			}
 			.date {
 				margin-bottom: 0.7em;
 				font-family: var(--font-mono);
-				font-size: 0.82rem;
+				font-size: 0.78rem;
 				letter-spacing: 0.08em;
 				color: var(--accent);
 			}
@@ -62,19 +63,12 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 				border: none;
 				height: 1px;
 				margin: 0;
-				background: linear-gradient(
-					90deg,
-					transparent,
-					var(--border) 15%,
-					var(--accent) 50%,
-					var(--border) 85%,
-					transparent
-				);
+				background: var(--rule);
 			}
 			.prose :global(a) {
-				color: var(--accent);
+				color: rgb(var(--black));
 				text-decoration: none;
-				background-image: linear-gradient(currentColor, currentColor);
+				background-image: linear-gradient(var(--accent), var(--accent));
 				background-size: 0% 1px;
 				background-repeat: no-repeat;
 				background-position: 0 100%;
@@ -86,11 +80,14 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 			.prose :global(code) {
 				padding: 0.14em 0.42em;
 				border: 1px solid var(--border);
-				border-radius: 6px;
-				background: rgba(165, 180, 252, 7%);
+				border-radius: 4px;
+				background: var(--bg-deep);
 				font-family: var(--font-mono);
 				font-size: 0.88em;
-				color: var(--accent);
+				color: rgb(var(--black));
+			}
+			.prose :global(pre) {
+				box-shadow: 0 20px 40px -30px rgba(23, 22, 26, 45%);
 			}
 			.prose :global(pre code) {
 				border: none;

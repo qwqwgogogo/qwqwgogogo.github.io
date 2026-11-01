@@ -39,7 +39,8 @@ npm run dev   # 打开 http://localhost:4321
 ## 想改的话，东西在哪
 
 - 站名和副标题在 `src/consts.ts`
-- 首页（hero + 作品卡片 + 最新文章）在 `src/pages/index.astro`，作品卡片是手写的数据数组，加了新项目要自己补一条
+- 配色、字号和字体（含自托管的 Fraunces / 思源宋体切片）在 `src/styles/global.css`
+- 首页（一句话 hero + 作品行 + 最新文章）在 `src/pages/index.astro`，作品是文件顶部手写的数组，加了新项目要自己补一条
 - 文章列表页在 `src/pages/blog/index.astro`，404 页在 `src/pages/404.astro`
 - 分享出去时用的预览图还是模板占位图 `src/assets/blog-placeholder-1.jpg`，换成自己的图再改 `src/components/BaseHead.astro`
 - 想绑自己的域名的话，先买域名，再在仓库 Settings → Pages 里填，同时改 `astro.config.mjs` 的 `site`
@@ -52,9 +53,8 @@ npm run dev   # 打开 http://localhost:4321
 | --- | --- |
 | `data-reveal` | 进入视口时淡入上移，可选 `="chars" / ="mask" / ="grow"` |
 | `data-stagger` | 加在容器上，子元素的进场自动排队，`data-stagger-step="110"` 调间隔 |
-| `data-spotlight` | 光斑跟随指针，边框同时发光 |
-| `data-tilt="7"` | 卡片随指针 3D 倾斜，数字是最大角度 |
-| `data-magnetic="7"` | 按钮被指针吸过去一点 |
+| `data-spotlight` | 指针扫过时行底浮出一团暖晕，浓淡跟着指针走 |
+| `data-glow` | 加在成块的区域上，区域内一团暖光跟随指针，比 spotlight 更慢更散 |
 | `data-parallax="0.12"` | 滚动视差，数字越大位移越多 |
 | `data-scramble="700"` | 拉丁小字进场时乱码解码，数字是毫秒 |
 
