@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/BlogPost.astro';
-import { CONTACT_EMAIL } from '../consts';
+import { CONTACT_MAIL } from '../consts';
 ---
 
 <Layout title="关于我" description="这个站点是谁做的，为什么做。" pubDate={new Date('2026-11-01')}>
@@ -12,7 +12,7 @@ import { CONTACT_EMAIL } from '../consts';
 		这里主要放三类东西：课上学到的东西整理成笔记，自己做的项目记录，以及一些没什么用但想写下来的想法。
 	</p>
 	<p>
-		想联系我可以写信到 <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>，也可以直接开仓库的 <a
+		想联系我可以写信到 <a data-mail={CONTACT_MAIL}>邮箱</a>，也可以直接开仓库的 <a
 			href="https://github.com/qwqwgogogo/qwqwgogogo.github.io/issues">Issue</a>。
 	</p>
 </Layout>
