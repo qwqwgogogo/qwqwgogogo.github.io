@@ -8,8 +8,10 @@ import Header from '../components/Header.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 import { primaryUrl, projects, shortName, titleUrl } from '../data/projects';
 
+// 同一天发的文章要有第二排序键，否则首页那几格被谁占着取决于文件名字母序
 const posts = (await getCollection('blog')).sort(
-	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+	(a, b) =>
+		b.data.pubDate.valueOf() - a.data.pubDate.valueOf() || a.id.localeCompare(b.id),
 );
 
 const handle = 'qwqwgogogo';
