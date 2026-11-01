@@ -22,11 +22,12 @@ type Project = {
 
 const projects: Project[] = [
 	{
-		// 源码与演示都已转私有，这里不放死链：url / secondary 留空即不渲染链接
+		// 源码仓库已转私有，只挂公开的演示站；url 留空则不渲染「仓库」和标题链接
 		name: '小豚 · 武汉 SPU 城市 AI 接待员',
 		desc: '纯静态、离线可用、句句有出处的城市 AI 接待员。SAIG 数命 SPU 国际 AI 大赛参赛作品。',
 		tags: 'TypeScript · 静态站',
 		year: '2026',
+		secondary: { label: '在线演示', url: 'https://xiaotun-wuhan-fy73vgwpmp3.qoder.zone' },
 	},
 	{
 		name: 'Ollama Model Manager',
@@ -48,6 +49,7 @@ const projects: Project[] = [
 const handle = 'qwqwgogogo';
 const shortName = (p: Project) => p.name.split(' · ')[0];
 const primaryUrl = (p: Project) => p.secondary?.url ?? p.url;
+const titleUrl = (p: Project) => p.url ?? p.secondary?.url;
 ---
 
 <!doctype html>
@@ -101,7 +103,7 @@ const primaryUrl = (p: Project) => p.secondary?.url ?? p.url;
 								<span class="n">{String(i + 1).padStart(2, '0')}</span>
 								<div class="body">
 									<h3>
-										{p.url ? <a href={p.url}>{p.name}</a> : <span>{p.name}</span>}
+										{titleUrl(p) ? <a href={titleUrl(p)}>{p.name}</a> : <span>{p.name}</span>}
 									</h3>
 									<p>{p.desc}</p>
 									<span class="tags">{p.tags}</span>
