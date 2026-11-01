@@ -38,10 +38,14 @@ import HeaderLink from './HeaderLink.astro';
 
 <style>
 	header {
+		position: sticky;
+		top: 0;
+		z-index: 10;
 		margin: 0;
 		padding: 0 1em;
-		background: white;
-		box-shadow: 0 2px 8px rgba(var(--black), 5%);
+		background: rgba(10, 12, 17, 78%);
+		backdrop-filter: blur(12px);
+		border-bottom: 1px solid var(--border);
 	}
 	h2 {
 		margin: 0;

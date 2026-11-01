@@ -38,6 +38,8 @@ npm run dev   # 打开 http://localhost:4321
 
 ## 还没做的事
 
-- 站点标题、副标题在 `src/consts.ts`，现在是占位的「我的博客」
-- 首页文案在 `src/pages/index.astro`
+- 站名和副标题在 `src/consts.ts`
+- 首页（大字 hero + 作品卡片 + 最新文章）在 `src/pages/index.astro`，作品卡片是手写的数据数组，加了新项目要自己补一条
+- 文章列表页在 `src/pages/blog/index.astro`
+- 分享出去时用的预览图还是模板占位图 `src/assets/blog-placeholder-1.jpg`，换成自己的图再改 `src/components/BaseHead.astro`
 - 想绑自己的域名的话，先买域名，再在仓库 Settings → Pages 里填，同时改 `astro.config.mjs` 的 `site`

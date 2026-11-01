@@ -7,6 +7,9 @@ import { defineConfig, fontProviders } from 'astro/config';
 // https://astro.build/config
 export default defineConfig({
 	site: 'https://qwqwgogogo.github.io',
+	markdown: {
+		shikiTheme: ['github-dark', 'github-dark'],
+	},
 	integrations: [mdx(), sitemap()],
 	fonts: [
 		{

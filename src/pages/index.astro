@@ -9,6 +9,28 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 const posts = (await getCollection('blog')).sort(
 	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
 );
+
+const projects = [
+	{
+		name: '小豚 · 武汉 SPU 城市 AI 接待员',
+		desc: '纯静态、离线可用、句句有出处的城市 AI 接待员。SAIG 数命 SPU 国际 AI 大赛参赛作品。',
+		tags: ['TypeScript', '静态站'],
+		url: 'https://github.com/qwqwgogogo/xiaotun-wuhan-src',
+		secondary: { label: '在线演示', url: 'https://qwqwgogogo.github.io/xiaotun-wuhan/' },
+	},
+	{
+		name: 'Ollama Model Manager',
+		desc: 'Windows 桌面应用：实时显示 GPU / CPU 显存占用，加载模型前先预估资源影响，并按硬件推荐最合适的模型。',
+		tags: ['Python', '桌面应用'],
+		url: 'https://github.com/qwqwgogogo/Ollama-Model-Manager',
+	},
+	{
+		name: 'SWEF-AT',
+		desc: '模型源码与复现脚本。',
+		tags: ['Python', '研究复现'],
+		url: 'https://github.com/qwqwgogogo/SWEF-AT',
+	},
+];
 ---
 
 <!doctype html>
@@ -19,36 +41,215 @@ const posts = (await getCollection('blog')).sort(
 	<body>
 		<Header />
 		<main>
-			<h1>{SITE_TITLE}</h1>
-			<p>{SITE_DESCRIPTION}</p>
-			<h2>最新文章</h2>
-			<ul class="post-list">
-				{
-					posts.slice(0, 5).map((post) => (
-						<li>
-							<a href={`/blog/${post.id}/`}>{post.data.title}</a>
-							<FormattedDate date={post.data.pubDate} />
-						</li>
-					))
-				}
-			</ul>
-			<p>
-				<a href="/blog/">所有文章 →</a>
-			</p>
+			<section class="hero">
+				<h1 class="name">{SITE_TITLE}</h1>
+				<p class="lede">{SITE_DESCRIPTION}</p>
+				<div class="cta">
+					<a class="btn primary" href="/blog/">看文章</a>
+					<a class="btn" href="https://github.com/qwqwgogogo">GitHub</a>
+					<a class="btn" href="/rss.xml">RSS</a>
+				</div>
+			</section>
+
+			<section class="block">
+				<h2 class="label">作品</h2>
+				<div class="grid">
+					{
+						projects.map((p) => (
+							<article class="card">
+								<h3>
+									<a href={p.url}>{p.name}</a>
+								</h3>
+								<p>{p.desc}</p>
+								<div class="tags">
+									{p.tags.map((t) => <span>{t}</span>)}
+								</div>
+								{
+									p.secondary && (
+										<a class="demo" href={p.secondary.url}>
+											{p.secondary.label} →
+										</a>
+									)
+								}
+							</article>
+						))
+					}
+				</div>
+			</section>
+
+			<section class="block">
+				<h2 class="label">最新文章</h2>
+				<ul class="post-list">
+					{
+						posts.slice(0, 3).map((post) => (
+							<li>
+								<a href={`/blog/${post.id}/`}>{post.data.title}</a>
+								<FormattedDate date={post.data.pubDate} />
+							</li>
+						))
+					}
+				</ul>
+				<p>
+					<a href="/blog/">所有文章 →</a>
+				</p>
+			</section>
 		</main>
 		<Footer />
 	</body>
 </html>
 
 <style>
+	main {
+		width: 1040px;
+		max-width: calc(100% - 2em);
+		padding: 0 1em;
+	}
+	.hero {
+		padding: 7rem 0 5rem;
+	}
+	.name {
+		font-size: clamp(4rem, 14vw, 9rem);
+		line-height: 0.95;
+		letter-spacing: -0.05em;
+		margin: 0;
+		background: linear-gradient(100deg, #e9edf6 0%, var(--accent) 48%, #67e8f9 100%);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+	.lede {
+		font-size: 1.4rem;
+		color: rgb(var(--gray));
+		max-width: 30em;
+		margin: 1.5rem 0 2.5rem;
+	}
+	.cta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+	.btn {
+		display: inline-block;
+		padding: 0.6em 1.4em;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: var(--surface);
+		color: rgb(var(--black));
+		font-size: 1rem;
+		text-decoration: none;
+		transition:
+			border-color 0.18s,
+			transform 0.18s;
+	}
+	.btn:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+		transform: translateY(-1px);
+	}
+	.btn.primary {
+		background: var(--accent-dark);
+		border-color: transparent;
+		color: #0a0c11;
+		font-weight: 700;
+	}
+	.btn.primary:hover {
+		color: #0a0c11;
+		filter: brightness(1.1);
+	}
+	.block {
+		padding: 3rem 0;
+		border-top: 1px solid var(--border);
+	}
+	.label {
+		font-size: 0.85rem;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: rgb(var(--gray));
+		margin-bottom: 1.5rem;
+	}
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+		gap: 1rem;
+	}
+	.card {
+		display: flex;
+		flex-direction: column;
+		padding: 1.4rem;
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		background: var(--surface);
+		transition:
+			border-color 0.18s,
+			transform 0.18s;
+	}
+	.card:hover {
+		border-color: rgba(165, 180, 252, 45%);
+		transform: translateY(-2px);
+	}
+	.card h3 {
+		font-size: 1.25rem;
+		margin-bottom: 0.5rem;
+	}
+	.card h3 a {
+		color: rgb(var(--black));
+		text-decoration: none;
+	}
+	.card h3 a:hover {
+		color: var(--accent);
+	}
+	.card p {
+		flex: 1;
+		margin: 0 0 1rem;
+		font-size: 0.98rem;
+		line-height: 1.6;
+		color: rgb(var(--gray));
+	}
+	.tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+	}
+	.tags span {
+		padding: 0.15em 0.7em;
+		border-radius: 999px;
+		background: rgba(165, 180, 252, 10%);
+		color: var(--accent);
+		font-size: 0.78rem;
+	}
+	.demo {
+		margin-top: 0.9rem;
+		font-size: 0.9rem;
+		text-decoration: none;
+	}
 	.post-list {
 		list-style: none;
+		margin: 0;
 		padding: 0;
 	}
 	.post-list li {
 		display: flex;
+		align-items: baseline;
 		justify-content: space-between;
-		gap: 1em;
-		padding: 0.4em 0;
+		gap: 1.5em;
+		padding: 0.7em 0;
+		border-bottom: 1px dashed var(--border);
+	}
+	.post-list a {
+		font-size: 1.15rem;
+	}
+	.post-list :global(time) {
+		color: rgb(var(--gray));
+		font-size: 0.9rem;
+		white-space: nowrap;
+	}
+	@media (max-width: 720px) {
+		.hero {
+			padding: 4rem 0 3rem;
+		}
+		.lede {
+			font-size: 1.15rem;
+		}
 	}
 </style>
