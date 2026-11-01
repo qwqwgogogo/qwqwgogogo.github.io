@@ -41,10 +41,10 @@ Error upgrading database: Can't locate revision identified by '0006_add_loader_p
 
 ## 修法
 
-改一行配置，把壳指向新装：
+改一行配置，把壳指向新装（`X:` 换成自己机器上的盘符）：
 
 ```json
-{ "basePath": "E:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI" }
+{ "basePath": "X:\\Comfy-Desktop\\ComfyUI-Installs\\ComfyUI" }
 ```
 
 新那套现在已经是 0.40.0，迁移链完整，库能认。
