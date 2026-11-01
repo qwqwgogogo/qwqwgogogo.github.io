@@ -100,6 +100,19 @@ function boot() {
 			),
 		);
 
+		if (node.kind === 'note' && node.desc) detail.append(el('p', 'gloss', node.desc));
+		if (node.gloss) {
+			const p = el('p', 'gloss', node.gloss.text);
+			const from = document.createElement('span');
+			from.className = 'from';
+			const a = document.createElement('a');
+			a.href = `${node.gloss.kind === 'note' ? '/notes/' : '/blog/'}${node.gloss.slug}/`;
+			a.textContent = node.gloss.title;
+			from.append('出自 ', a);
+			p.append(from);
+			detail.append(p);
+		}
+
 		if (node.posts.length) detail.append(linkList(node.posts, '/blog/'));
 		if (node.kind !== 'note' && node.notes.length) detail.append(linkList(node.notes, '/notes/'));
 		if (node.projects.length) {

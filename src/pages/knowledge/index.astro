@@ -19,6 +19,8 @@ type Node = {
 	projects: string[];
 	subject?: string;
 	url?: string | null;
+	gloss?: { text: string; slug: string; title: string; kind: string };
+	desc?: string;
 	x: number;
 	y: number;
 	z: number;
@@ -294,6 +296,21 @@ const hrefOf = (slug: string) => (graph.notes.some((d) => d.slug === slug) ? `/n
 				font-size: 0.85rem;
 				color: rgb(var(--gray));
 			}
+			.detail :global(.gloss) {
+				margin: 0.7rem 0 0;
+				padding-left: 0.75rem;
+				border-left: 2px solid var(--border);
+				color: rgb(var(--gray));
+				font-size: 0.88rem;
+				line-height: 1.75;
+			}
+			.detail :global(.gloss .from) {
+				display: block;
+				margin-top: 0.35rem;
+				font-family: var(--font-mono);
+				font-size: 0.72rem;
+				color: rgba(var(--gray), 78%);
+			}
 			.detail :global(.related-label) {
 				margin: 1.1em 0 0.5em;
 				font-size: 0.8rem;
@@ -418,6 +435,8 @@ const hrefOf = (slug: string) => (graph.notes.some((d) => d.slug === slug) ? `/n
 				<p class="lede" data-reveal style="--rd:260ms">
 					这张图不是手画的。构建脚本扫过每一篇已发布的文章、学习笔记和首页的项目条目，把反复出现的技术术语抽成节点，
 					再把「同一篇文章里一起出现过」连成边——所以它反映的是我实际写下来的东西，不是我打算学什么。
+					点开一个词，说明里那句解释也不是我现编的定义，是从出现它的那段原文里挑出来的一句话，后面标了出处；
+					挑不出这样一句的（多半是命令和工具名）就宁可空着。
 				</p>
 				<hr class="rule" data-reveal="grow" style="--rd:340ms" />
 			</div>
@@ -581,6 +600,15 @@ const hrefOf = (slug: string) => (graph.notes.some((d) => d.slug === slug) ? `/n
 					<p class="kind">{KIND_LABEL[selected.kind]}</p>
 					<p class="name">{selected.label}</p>
 					<p class="meta">{metaOf(selected)}</p>
+					{selected.kind === 'note' && selected.desc && <p class="gloss">{selected.desc}</p>}
+					{selected.gloss && (
+						<p class="gloss">
+							{selected.gloss.text}
+							<span class="from">
+								出自 <a href={hrefOf(selected.gloss.slug)}>{selected.gloss.title}</a>
+							</span>
+						</p>
+					)}
 					{
 						selected.posts.length + selected.notes.length > 0 && (
 							<ul>

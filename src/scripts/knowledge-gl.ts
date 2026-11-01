@@ -15,6 +15,9 @@ export type GraphNode = {
 	projects: string[];
 	url?: string | null;
 	subject?: string;
+	/** 构建脚本从他自己正文里挑出来的一句原话，不是定义，只是「原文里怎么说它」 */
+	gloss?: { text: string; slug: string; title: string; kind: string };
+	desc?: string;
 	x: number;
 	y: number;
 	z: number;

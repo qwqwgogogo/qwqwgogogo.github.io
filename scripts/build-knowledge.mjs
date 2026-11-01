@@ -119,6 +119,7 @@ function readDocs(dir, kind) {
 				slug,
 				kind,
 				title: data.title ?? slug,
+				desc: data.description ?? '',
 				subject: typeof data.subject === 'string' ? data.subject : '',
 				// 笔记自己声明的考点；文章没有这个字段
 				declared: Array.isArray(data.tags) ? data.tags : [],
@@ -262,6 +263,7 @@ const noteNodes = notes.map((n) => {
 		id: nodes.length,
 		label: n.title.split('：')[0].trim(),
 		kind: 'note',
+		desc: n.desc,
 		count: n.tagIds.length,
 		posts: [],
 		notes: [n.slug],
@@ -335,6 +337,67 @@ subjectNodes.forEach((sn) => {
 	});
 });
 
+/* ---------- 术语解释：只从他自己的正文里挑句子，脚本不生成任何文字 ---------- */
+const SENTENCE = /[^。！？\n]+[。！？]?/g;
+// 像下定义的写法。命中只是加分，不是门槛——门槛是这句话里真的有这个词
+const DEF_MARK = /是指|指的是|就是|称为|叫做|用于|用来|负责|表示|意味着|可以理解为|简单说|所谓|分成|分为|包括/;
+const BS = String.fromCharCode(92);
+const SPECIAL = '.+*?^$()[]{}|';
+
+function sentencePool(text) {
+	const clean = text.replace(/`{3}[\s\S]*?`{3}/g, ' ').replace(/`([^`\n]+)`/g, '$1');
+	return (clean.match(SENTENCE) ?? [])
+		.map((x) => x.replace(/^[>\-*+\s]+/, '').replace(/[*`]/g, '').replace(/\s+/g, ' ').trim())
+		.filter((x) => x.length > 0 && !x.includes('|') && !x.startsWith('#'));
+}
+
+const pools = docs.map((d) => ({ doc: d, sentences: sentencePool(d.plain) }));
+
+/** ASCII 词要整词匹配：连字符算词内字符，否则 PATH 会命中 clip-path */
+const termRe = new Map();
+function reOf(label) {
+	if (!termRe.has(label)) {
+		const esc = [...label].map((c) => (SPECIAL.includes(c) ? BS + c : c)).join('');
+		termRe.set(label, /^[A-Za-z0-9]/.test(label) ? new RegExp(`(?<![A-Za-z0-9_-])${esc}(?![A-Za-z0-9_-])`, 'i') : null);
+	}
+	return termRe.get(label);
+}
+function hasTerm(text, label) {
+	const re = reOf(label);
+	return re ? re.test(text) : text.includes(label);
+}
+
+function scoreSentence(x) {
+	const len = [...x].length;
+	if (len < 12 || len > 120) return -1;
+	let score = 0;
+	if (DEF_MARK.test(x)) score += 4;
+	if (x.includes('——') || x.includes(':') || x.includes('：')) score += 1;
+	return score - Math.abs(len - 44) / 22; // 太短说不清，太长是在讲故事
+}
+
+function glossFor(label) {
+	let best = null;
+	for (const { doc, sentences } of pools) {
+		if (!hasTerm(doc.plain, label)) continue;
+		for (const x of sentences) {
+			if (!hasTerm(x, label)) continue;
+			const score = scoreSentence(x);
+			if (score < 0) continue;
+			if (!best || score > best.score) best = { score, text: x, slug: doc.slug, title: doc.title, kind: doc.kind };
+		}
+	}
+	return best && { text: best.text, slug: best.slug, title: best.title, kind: best.kind };
+}
+
+for (const n of nodes) {
+	if (n.kind !== 'concept') continue;
+	const g = glossFor(n.label);
+	if (g) n.gloss = g;
+}
+const glossed = nodes.filter((n) => n.kind === 'concept' && n.gloss).length;
+const conceptCount = nodes.filter((n) => n.kind === 'concept').length;
+
 const edges = [...edgeWeight.entries()].map(([key, weight]) => {
 	const [a, b] = key.split('|').map(Number);
 	return { a, b, weight };
@@ -380,7 +443,7 @@ const maxDeg = Math.max(0, ...degree.values());
 console.log(
 	`knowledge.json: ${nodes.length} 节点 / ${edges.length} 边` +
 		`（weight>=2 的 ${edges.filter((e) => e.weight >= 2).length} 条）` +
-		` · 孤点 ${iso} · 最大度 ${maxDeg}`,
+		` · 孤点 ${iso} · 最大度 ${maxDeg} · 术语解释 ${glossed}/${conceptCount}`,
 );
 console.log(
 	'  节点类别:',
