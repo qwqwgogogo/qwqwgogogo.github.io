@@ -16,7 +16,7 @@ export type GraphNode = {
 	url?: string | null;
 	subject?: string;
 	/** 构建脚本从他自己正文里挑出来的一句原话，不是定义，只是「原文里怎么说它」 */
-	gloss?: { text: string; slug: string; title: string; kind: string };
+	gloss?: { text: string; slug: string; title: string; kind: string; url?: string | null };
 	desc?: string;
 	x: number;
 	y: number;
@@ -24,11 +24,15 @@ export type GraphNode = {
 };
 
 export type Graph = {
+	/** site = 文章+项目那条线，exam = 408 笔记那条线；文案和跳转规则按它分 */
+	scope: 'site' | 'exam';
 	posts: { slug: string; title: string }[];
 	notes: { slug: string; title: string; subject: string }[];
 	subjects: { key: string; name: string; notes: number }[];
 	nodes: GraphNode[];
 	edges: { a: number; b: number; weight: number }[];
+	/** 被「挑不出原话」这道门槛筛掉的词，页面拿它的个数说话，别让文案写死数字 */
+	dropped: string[];
 };
 
 const INK = 0x2b2823;

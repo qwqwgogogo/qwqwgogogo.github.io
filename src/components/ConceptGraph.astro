@@ -1,0 +1,499 @@
+---
+/**
+ * 图谱的舞台：3D 画布 + 构建时算好的平面降级版 + 右边的说明面板 + 左边的按钮栏。
+ * /knowledge/ 和 /knowledge/408/ 共用这一份，喂进去的图和按钮栏配置不同；
+ * 每个按钮栏是一段 { 标题, 节点 }，第一栏用 h2，其余用 h3；带 pending 的那格渲染成虚线链接
+ * （图里没有它的点，不能给一个点了没反应的按钮）。
+ */
+import type { Graph, GraphNode } from '../scripts/knowledge-gl';
+import { glossHref, kindLabel, metaFor } from '../scripts/kb-copy';
+
+type Section = { title: string; href?: string; items: (GraphNode | { pending: string })[] };
+
+const {
+	graph,
+	hubCount = 14,
+	sections = [],
+}: { graph: Graph; hubCount?: number; sections?: Section[] } = Astro.props;
+const scope = graph.scope;
+
+const titleOf = new Map<string, string>(
+	[...graph.posts, ...graph.notes].map((d) => [d.slug, d.title] as [string, string]),
+);
+const subjectOf = new Map(graph.subjects.map((s) => [s.key, s.name]));
+const degree = new Map<number, number>();
+graph.edges.forEach((e) => {
+	degree.set(e.a, (degree.get(e.a) ?? 0) + e.weight);
+	degree.set(e.b, (degree.get(e.b) ?? 0) + e.weight);
+});
+const deg = (n: GraphNode) => degree.get(n.id) ?? 0;
+const neighbors = (id: number) =>
+	[...new Set(graph.edges.filter((e) => e.a === id || e.b === id).map((e) => (e.a === id ? e.b : e.a)))];
+
+// 降级用的平面图：构建时把同一批球面坐标做一次固定角度的正交投影，
+// 所以没有 WebGL 的机器看到的结构和能跑的机器是同一张图，不是另画一张。
+const YAW = -0.55;
+const PITCH = 0.34;
+const project = (n: GraphNode) => {
+	const cy = Math.cos(YAW);
+	const sy = Math.sin(YAW);
+	const cp = Math.cos(PITCH);
+	const sp = Math.sin(PITCH);
+	const x1 = n.x * cy + n.z * sy;
+	const z1 = -n.x * sy + n.z * cy;
+	const y2 = n.y * cp - z1 * sp;
+	return { sx: +(x1 + 130).toFixed(1), sy: +(-y2 + 130).toFixed(1) };
+};
+const pts = new Map(graph.nodes.map((n) => [n.id, project(n)]));
+const W = 260;
+const hubs = [...graph.nodes]
+	.sort((a, b) => deg(b) - deg(a))
+	.slice(0, hubCount)
+	.map((n) => n.id);
+const selected = graph.nodes.reduce((a, b) => (deg(b) > deg(a) ? b : a));
+
+const hrefOf = (slug: string) => (graph.notes.some((d) => d.slug === slug) ? `/notes/${slug}/` : `/blog/${slug}/`);
+const metaOf = (n: GraphNode) =>
+	metaFor(n, scope, neighbors(n.id).length, n.subject ? subjectOf.get(n.subject) : undefined);
+const isNode = (x: GraphNode | { pending: string }): x is GraphNode => 'id' in x;
+---
+
+<div class="stage" data-stage>
+	<svg
+		class="flat"
+		viewBox={`0 0 ${W} ${W}`}
+		preserveAspectRatio="xMidYMid meet"
+		role="group"
+		aria-label="概念图的平面版本，里面的点可以选"
+	>
+		<title>概念图的平面版本（按构建时算好的坐标绘制）</title>
+		{
+			graph.edges.map((e) => {
+				const a = pts.get(e.a)!;
+				const b = pts.get(e.b)!;
+				return (
+					<line
+						class={`edge${e.weight >= 2 ? ' strong' : ''}`}
+						stroke-width={e.weight >= 2 ? 1.1 : 0.5}
+						x1={a.sx}
+						y1={a.sy}
+						x2={b.sx}
+						y2={b.sy}
+					/>
+				);
+			})
+		}
+		{
+			graph.nodes.map((n) => {
+				const p = pts.get(n.id)!;
+				return (
+					<g
+						data-node-id={n.id}
+						class="pick"
+						role="button"
+						tabindex="0"
+						aria-label={`${n.label}，${kindLabel(n.kind, scope)}`}
+					>
+						<circle
+							class={`node${n.kind === 'concept' ? '' : ` ${n.kind}`}`}
+							cx={p.sx}
+							cy={p.sy}
+							r={(1.6 + Math.min(deg(n), 14) * 0.22).toFixed(2)}
+						/>
+						{hubs.includes(n.id) && <text class="tag" x={p.sx + 4} y={p.sy - 3}>{n.label}</text>}
+					</g>
+				);
+			})
+		}
+	</svg>
+	<p class="hint">
+		<span class="pointer">拖动旋转 · 滚轮缩放 · </span><span class="touch">单指横拖旋转 · 双指缩放 · </span>点一个词看它连着什么
+	</p>
+</div>
+
+<div class="legend" data-reveal>
+	{
+		scope === 'exam' ? (
+			<>
+				<span>
+					<i class="s" />
+					408 科目
+				</span>
+				<span>
+					<i class="n" />
+					学习笔记
+				</span>
+				<span>
+					<i />
+					考点
+				</span>
+			</>
+		) : (
+			<>
+				<span>
+					<i />
+					文章里的概念
+				</span>
+				<span>
+					<i class="p" />
+					项目
+				</span>
+			</>
+		)
+	}
+	<span>点越大 = 连得越多 · 线越粗 = 在同几篇里反复共现</span>
+</div>
+
+<div class="split">
+	<div class="column">
+		{
+			sections.map((s, i) => (
+				<>
+							{i === 0 ? <h2>{s.title}</h2> : <h3>{s.href ? <a href={s.href}>{s.title}</a> : s.title}</h3>}
+							<ul class="chips" data-chips>
+								{s.items.map((item) => (
+									<li>
+										{isNode(item) ? (
+											<button type="button" data-node-id={item.id} aria-current={String(item.id === selected.id)}>
+												{item.label}
+											</button>
+										) : (
+											<a class="empty-chip" href="/notes/">
+												{item.pending}（还没写）
+											</a>
+										)}
+									</li>
+								))}
+							</ul>
+						</>
+			))
+		}
+		<slot />
+	</div>
+
+	<aside class="detail" data-detail aria-live="polite">
+		<p class="kind">{kindLabel(selected.kind, scope)}</p>
+		<p class="name">
+			{selected.kind === 'note' ? titleOf.get(selected.notes[0] ?? '') ?? selected.label : selected.label}
+		</p>
+		<p class="meta">{metaOf(selected)}</p>
+		{selected.kind === 'note' && selected.desc && <p class="gloss">{selected.desc}</p>}
+		{
+			selected.gloss && (
+				<p class="gloss">
+					{selected.gloss.text}
+					<span class="from">
+						出自 <a href={glossHref(selected.gloss)}>{selected.gloss.title}</a>
+					</span>
+				</p>
+			)
+		}
+		{
+			selected.posts.length + selected.notes.length > 0 && (
+				<ul>
+					{[...selected.posts, ...selected.notes].map((slug) => (
+						<li>
+							<a href={hrefOf(slug)}>{titleOf.get(slug) ?? slug}</a>
+						</li>
+					))}
+				</ul>
+			)
+		}
+		{selected.kind === 'subject' && <a href="/notes/">学习笔记页 ↗</a>}
+		{
+			selected.kind === 'project' && selected.url && (
+				<a href={selected.url} target="_blank" rel="noreferrer">
+					仓库 / 演示 ↗
+				</a>
+			)
+		}
+	</aside>
+</div>
+
+<style>
+	.stage {
+		position: relative;
+		height: clamp(360px, 58vh, 620px);
+		margin: 1.6em 0 0;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background: radial-gradient(120% 90% at 50% 0%, #fffdf8 0%, var(--bg) 62%, var(--bg-deep) 100%);
+		overflow: hidden;
+	}
+	.stage :global(.kb-gl) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		display: block;
+		/* pan-y：手机上竖着划还是滚页面，横着划才转图，不然整页划不动 */
+		touch-action: pan-y;
+		cursor: grab;
+	}
+	.stage :global(.kb-gl:active) {
+		cursor: grabbing;
+	}
+	.flat {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+	}
+	/* WebGL 起来之后才把平面图收起来，两条路不会同时出现在无障碍树里 */
+	.stage.is-3d .flat {
+		display: none;
+	}
+	.flat .edge {
+		stroke: rgba(23, 22, 26, 0.16);
+	}
+	.flat .edge.strong {
+		stroke: rgba(23, 22, 26, 0.4);
+	}
+	.flat .node {
+		fill: rgb(var(--black));
+	}
+	.flat .node.project {
+		fill: var(--accent);
+	}
+	.flat .node.note {
+		fill: #2e6b63;
+	}
+	.flat .node.subject {
+		fill: #7a6a2f;
+	}
+	.flat .tag {
+		font-family: var(--font-mono);
+		font-size: 7px;
+		fill: rgba(23, 22, 26, 0.72);
+	}
+	/* 降级版也得能用键盘走：SVG 的 <g> 上 tabindex，焦点画在点上 */
+	.flat .pick {
+		cursor: pointer;
+		outline: none;
+	}
+	.flat .pick:focus-visible circle {
+		stroke: var(--accent);
+		stroke-width: 2.5;
+	}
+	.legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1.2rem;
+		align-items: center;
+		margin: 0.9em 0 0;
+		font-size: 0.85rem;
+		color: rgb(var(--gray));
+	}
+	.legend i {
+		display: inline-block;
+		width: 9px;
+		height: 9px;
+		border-radius: 50%;
+		margin-right: 0.45em;
+		background: rgb(var(--black));
+		vertical-align: middle;
+	}
+	.legend i.p {
+		background: var(--accent);
+	}
+	.legend i.n {
+		background: #2e6b63;
+	}
+	.legend i.s {
+		background: #7a6a2f;
+	}
+	.hint {
+		position: absolute;
+		right: 14px;
+		bottom: 12px;
+		padding: 0.25em 0.7em;
+		border-radius: 999px;
+		background: rgba(246, 243, 236, 0.86);
+		font-size: 0.75rem;
+		color: rgb(var(--gray));
+		pointer-events: none;
+	}
+	.hint .touch {
+		display: none;
+	}
+	@media (hover: none), (pointer: coarse) {
+		.hint .pointer {
+			display: none;
+		}
+		.hint .touch {
+			display: inline;
+		}
+	}
+	.split {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 300px;
+		gap: 1.6rem;
+		margin-top: 2.2em;
+		align-items: start;
+	}
+	@media (max-width: 860px) {
+		.split {
+			grid-template-columns: 1fr;
+		}
+	}
+	.detail {
+		position: sticky;
+		top: 92px;
+		padding: 1.2em 1.3em;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background: #fffdf8;
+		font-size: 0.95rem;
+	}
+	/* 说明面板每次选中都由脚本重建，拿不到 scoped 样式的作用域属性，所以写成子选择器 */
+	.detail :global(.kind) {
+		margin: 0;
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--accent);
+	}
+	.detail :global(.name) {
+		margin: 0.2em 0 0.5em;
+		font-family: var(--font-serif-cjk);
+		font-size: 1.5rem;
+		line-height: 1.2;
+		word-break: break-word;
+	}
+	.detail :global(.meta) {
+		margin: 0 0 0.9em;
+		font-size: 0.85rem;
+		color: rgb(var(--gray));
+	}
+	.detail :global(.gloss) {
+		margin: 0.7rem 0 0;
+		padding-left: 0.75rem;
+		border-left: 2px solid var(--border);
+		color: rgb(var(--gray));
+		font-size: 0.88rem;
+		line-height: 1.75;
+	}
+	.detail :global(.gloss .from) {
+		display: block;
+		margin-top: 0.35rem;
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		color: rgba(var(--gray), 78%);
+	}
+	.detail :global(.related-label) {
+		margin: 1.1em 0 0.5em;
+		font-size: 0.8rem;
+		letter-spacing: 0.02em;
+		color: rgb(var(--gray));
+	}
+	.detail :global(ul) {
+		margin: 0;
+		padding-left: 1.1em;
+		font-size: 0.92rem;
+		line-height: 1.6;
+	}
+	.detail :global(li) {
+		margin-bottom: 0.3em;
+	}
+	.detail :global(li::marker) {
+		color: var(--accent);
+	}
+	.detail :global(ul.chips) {
+		padding-left: 0;
+	}
+	.detail :global(ul.chips li) {
+		margin: 0;
+	}
+	.detail :global(a) {
+		text-decoration: none;
+		border-bottom: 1px solid rgba(191, 63, 38, 0.45);
+	}
+	/* 按钮由脚本在选中后重建，它们没有本组件的作用域属性，所以走 global */
+	.column :global(.chips) {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.column :global(.chips button) {
+		font: inherit;
+		font-size: 0.84rem;
+		padding: 0.2em 0.62em;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: transparent;
+		color: rgb(38 36 33);
+		cursor: pointer;
+		transition:
+			background-color 0.25s var(--e-out),
+			border-color 0.25s var(--e-out),
+			color 0.25s var(--e-out);
+	}
+	.column :global(.chips button:hover) {
+		border-color: var(--accent);
+		color: var(--accent-dark);
+	}
+	.column :global(.chips button[aria-current='true']) {
+		background: var(--accent);
+		border-color: var(--accent);
+		color: #fffdf8;
+	}
+	.column :global(h2) {
+		margin: 2.4em 0 0.9em;
+		font-family: var(--font-serif-cjk);
+		font-size: 1.25rem;
+		color: rgb(var(--black));
+	}
+	.column :global(h3) {
+		margin: 1.8em 0 0.7em;
+		font-family: var(--font-serif-cjk);
+		font-size: 1rem;
+		color: rgb(var(--gray));
+	}
+	.column :global(h3 a) {
+		color: inherit;
+		text-decoration: none;
+		border-bottom: 1px solid var(--border);
+	}
+	.column :global(h3 a:hover) {
+		color: var(--accent);
+	}
+	/* 还没写笔记的科目不给按钮：图里没有它的点，点了也没反应 */
+	.column :global(.empty-chip) {
+		display: inline-block;
+		padding: 0.2em 0.62em;
+		border: 1px dashed var(--border);
+		border-radius: 999px;
+		font-size: 0.84rem;
+		color: rgb(var(--gray));
+		text-decoration: none;
+	}
+	.column :global(.empty-chip:hover) {
+		border-color: var(--accent);
+		color: var(--accent-dark);
+	}
+	.column :global(.how) {
+		margin-top: 3em;
+		padding-top: 1.6em;
+		border-top: 1px solid var(--rule);
+		color: rgb(var(--gray));
+		font-size: 0.95rem;
+	}
+	.column :global(.how code) {
+		font-size: 0.85em;
+	}
+	.column :global(.how a) {
+		color: var(--accent-dark);
+	}
+	.stage :global(.notice) {
+		position: absolute;
+		left: 14px;
+		bottom: 12px;
+		margin: 0;
+		font-size: 0.75rem;
+		color: rgb(var(--gray));
+	}
+</style>

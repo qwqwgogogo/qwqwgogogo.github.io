@@ -1,0 +1,144 @@
+---
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import Ambient from '../../components/Ambient.astro';
+import BaseHead from '../../components/BaseHead.astro';
+import ConceptGraph from '../../components/ConceptGraph.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import type { Graph, GraphNode } from '../../scripts/knowledge-gl';
+
+const graph = JSON.parse(
+	readFileSync(join(process.cwd(), 'src/data/knowledge-408.json'), 'utf8'),
+) as Graph;
+
+const concepts = graph.nodes.filter((n) => n.kind === 'concept').sort((a, b) => b.count - a.count);
+const subjects = graph.subjects.filter((s) => s.notes > 0);
+const notesOf = (key: string) => graph.nodes.filter((n) => n.kind === 'note' && n.subject === key);
+const subjectNodes = graph.nodes.filter((n) => n.kind === 'subject');
+
+// 没写过笔记的科目在图里没有点，只给一个跳到笔记页的虚线标签
+const subjectRow: (GraphNode | { pending: string })[] = [
+	...graph.subjects.map((s) => {
+		const node = subjectNodes.find((n) => n.label === s.name);
+		return node ?? { pending: s.name };
+	}),
+];
+
+const sections = [
+	{ title: '考点', items: concepts },
+	{ title: '科目', items: subjectRow },
+	...subjects.map((s) => ({
+		title: `${s.name}（${s.notes} 篇）`,
+		href: '/notes/',
+		items: notesOf(s.key),
+	})),
+];
+---
+
+<html lang="zh-CN">
+	<head>
+		<BaseHead
+			title="408 考点图谱"
+			description="把 408 学习笔记里自己声明的考点连成一张图：科目、笔记、考点三层，每个考点都能点开一句笔记正文里的原话。"
+		/>
+		<style>
+			main {
+				width: 1040px;
+				max-width: calc(100% - 2em);
+				margin: auto;
+				padding: 0 1em 4em;
+			}
+			.title {
+				padding: clamp(2.5rem, 8vh, 4.5rem) 0 0.9em;
+			}
+			.title h1 {
+				margin: 0 0 0.4em;
+				font-family: var(--font-serif-cjk);
+				font-size: clamp(1.85rem, 4.4vw, 2.7rem);
+				letter-spacing: -0.012em;
+			}
+			.kicker {
+				margin: 0 0 0.9em;
+				font-family: var(--font-mono);
+				font-size: 0.78rem;
+				letter-spacing: 0.08em;
+				color: var(--accent);
+			}
+			.lede {
+				max-width: 60ch;
+				margin: 0;
+				color: rgb(var(--gray));
+			}
+			.cross {
+				display: inline-block;
+				margin-top: 1.1em;
+				padding: 0.34em 0.8em;
+				border: 1px solid var(--border);
+				border-radius: 999px;
+				font-size: 0.85rem;
+				color: rgb(var(--gray));
+				text-decoration: none;
+			}
+			.cross:hover {
+				border-color: var(--accent);
+				color: var(--accent-dark);
+			}
+			.rule {
+				border: none;
+				height: 1px;
+				margin: 2.4em 0 0;
+				background: var(--rule);
+			}
+		</style>
+	</head>
+
+	<body>
+		<Ambient />
+		<Header />
+		<main class="kb">
+			<div class="title">
+				<p class="kicker" data-reveal style="--rd:60ms">
+					{graph.nodes.length} 个节点 · {graph.edges.length} 条关系 · 出自 {graph.notes.length} 篇笔记
+				</p>
+				<h1 data-mask data-reveal style="--rd:140ms">408 考点图谱</h1>
+				<p class="lede" data-reveal style="--rd:260ms">
+					这张图上只有我复习 408 时自己写下的东西：一个考点要在图上出现，得先被某篇笔记的 frontmatter 声明，
+					再真的在那篇笔记的正文里写出来——只标了名字没写的词会被脚本丢掉，不进图。
+					点一个考点，面板里那句解释也是从写它的那篇笔记里挑出来的原话，不是词典定义。
+					三层关系就三种点：科目连它下面的笔记，笔记连它声明的考点，同一篇里一起出现的考点之间再连一条边。
+				</p>
+				<a class="cross" href="/knowledge/" data-reveal style="--rd:320ms">
+					文章和项目里的技术词在知识库那张图 →
+				</a>
+				<hr class="rule" data-reveal="grow" style="--rd:340ms" />
+			</div>
+
+			<ConceptGraph {graph} {sections} hubCount={16}>
+				<div class="how">
+					<h2>这些点是怎么进图的</h2>
+					<p>
+						数据由 <code>scripts/build-knowledge.mjs</code> 在每次构建时从 <code>src/content/notes/</code> 生成，
+						写到 <code>src/data/knowledge-408.json</code>。笔记的 frontmatter 有 <code>subject</code>（四门课的 key：
+						ds / co / os / net，写错在构建时就报错）和一组 <code>tags</code>——tags 就是我声明的考点。
+					</p>
+					<p>
+						脚本不信任声明：<code>「B 树」</code>这种中英之间带空格的写法，它会抹掉空格回正文里数一遍，
+						数不到就当场警告并丢掉；数到了还要能在正文里挑出一句 12–120 字、真的讲到它的原话，挑不出就不进图。
+						所以这张图上 <b>{concepts.length} 个考点，{concepts.length} 个都有原话</b>；被这道门槛筛掉的是 {graph.dropped.length} 个。
+					</p>
+					<p>
+						中文考点只能靠 tags，因为脚本没有分词能力，硬猜只会造出一堆奇怪的词。这条线上也没有形状规则：
+						图上每个词都是我声明过的，笔记里顺手写到但没声明的（比如某篇里的 <code>int</code>）不进这张图——文章那条线才按写法自己长点。
+					</p>
+					<p>
+						生成于 {graph.generatedAt}，共 {graph.nodes.length} 个节点、{graph.edges.length} 条关系。
+						笔记原文在<a href="/notes/">学习笔记页</a>，图的搭法写在<a href="/blog/knowledge-graph-3d-build/">这篇技术文档</a>里。
+					</p>
+				</div>
+			</ConceptGraph>
+		</main>
+		<Footer />
+		<script>import '../../scripts/knowledge';</script>
+	</body>
+</html>

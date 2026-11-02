@@ -24,7 +24,7 @@ const filledSubjects = bySubject.filter((s) => s.items.length > 0).length;
 	<head>
 		<BaseHead
 			title={`学习笔记 · ${SITE_TITLE}`}
-			description="408 的复习笔记：按科目分栏，每篇里的考点同时进知识库那张图。"
+			description="408 的复习笔记：按科目分栏，每篇声明的考点会长成 /knowledge/408/ 那张考点图。"
 		/>
 		<style>
 			main {
@@ -247,8 +247,9 @@ const filledSubjects = bySubject.filter((s) => s.items.length > 0).length;
 				</p>
 				<h1 class="heading" data-mask data-reveal style="--rd:140ms">学习笔记</h1>
 				<p class="lede" data-reveal style="--rd:260ms">
-					复习 408 时自己写的东西，写完一篇就搬一篇上来。它和<a href="/knowledge/">知识库</a>是两套东西：
-					那边是从正文里抽术语自动连出来的图，这边是我按科目手动整理的原文。
+					复习 408 时自己写的东西，写完一篇就搬一篇上来。这边是我按科目手动整理的原文，
+					<a href="/knowledge/408/">考点图</a>是这些笔记自己长出来的样子；<a href="/knowledge/">知识库</a>是另一张图，
+					只画文章和首页项目里出现的术语，两边不混在一起。
 				</p>
 			</header>
 
@@ -260,7 +261,9 @@ const filledSubjects = bySubject.filter((s) => s.items.length > 0).length;
 							<p class="tally">
 								<b>{s.items.length}</b> 篇
 							</p>
-							{s.items.length > 0 && <a class="graph-link" href="/knowledge/">在图里看这一科 ↗</a>}
+							{s.items.length > 0 && (
+								<a class="graph-link" href="/knowledge/408/">在图里看这一科 ↗</a>
+							)}
 						</header>
 						{s.items.length > 0 ? (
 							<ul data-stagger data-stagger-step="70">
@@ -277,7 +280,7 @@ const filledSubjects = bySubject.filter((s) => s.items.length > 0).length;
 												<FormattedDate date={note.data.pubDate} />
 												<span class="tags">
 													{note.data.tags.slice(0, 6).map((tag) => (
-														<a href={`/knowledge/?label=${encodeURIComponent(tag)}`}>{tag}</a>
+														<a href={`/knowledge/408/?label=${encodeURIComponent(tag)}`}>{tag}</a>
 													))}
 												</span>
 											</footer>
@@ -287,7 +290,7 @@ const filledSubjects = bySubject.filter((s) => s.items.length > 0).length;
 							</ul>
 						) : (
 							<p class="empty">
-								这一科还没有笔记。知识图谱里也不会出现它的节点——<code>build-knowledge.mjs</code> 只给真的有笔记的科目建点。
+								这一科还没有笔记。考点图里也不会出现它的节点——<code>build-knowledge.mjs</code> 只给真的有笔记的科目建点。
 								写了第一篇才会出现在这里。
 							</p>
 						)}
@@ -303,11 +306,12 @@ const filledSubjects = bySubject.filter((s) => s.items.length > 0).length;
 					但脚本不信任声明：它会回正文里数一遍，正文没出现过的词直接丢掉，不进图。所以「标了但没写」在这种图上藏不住。
 				</p>
 				<p>
-					另外，笔记里的英文术语走的是和文章一样的规则——全大写缩写、反引号里的标识符、带版本号或点划线的写法，
-					被提过两次的才留。中文考点只能靠 tags，因为脚本没有分词能力，硬猜只会造出一堆奇怪的词。
+					这张图上的概念全部来自 tags，脚本不会自己在正文里挑词——中文没有分词，硬切只会造出「的一次握手」这种怪词。
+					<code>DMA</code>、<code>B+树</code> 这些写法能在图上，也是因为我把它们写进了 tags，不是因为它们长得像术语。
+					两条线共用一道门槛：正文里挑不出一句讲到这个词的原话，就不进图——图上每个点都得能点开一句我自己写过的话。
 				</p>
 				<p>
-					点上面任意一个考点会跳到知识库并按标签选中它（<code>?label=</code>）。四门课里目前有笔记的是
+					点上面任意一个考点会跳到<a href="/knowledge/408/">考点图</a>并按标签选中它（<code>?label=</code>）。四门课里目前有笔记的是
 					{filledSubjects} 门，其余的空着，等我自己写上。
 				</p>
 			</div>

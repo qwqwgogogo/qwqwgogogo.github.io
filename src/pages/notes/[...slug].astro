@@ -165,7 +165,7 @@ const { Content } = await render(note);
 							<ul class="tags" data-reveal style="--rd:300ms">
 								{note.data.tags.map((tag) => (
 									<li>
-										<a href={`/knowledge/?label=${encodeURIComponent(tag)}`}>{tag}</a>
+										<a href={`/knowledge/408/?label=${encodeURIComponent(tag)}`}>{tag}</a>
 									</li>
 								))}
 							</ul>
@@ -176,7 +176,7 @@ const { Content } = await render(note);
 					</div>
 					<div class="back">
 						<a href="/notes/">← 回到 {subjectName(note.data.subject)}</a>
-						<a href="/knowledge/">在知识图谱里看这些词 ↗</a>
+						<a href="/knowledge/408/">在考点图里看这些词 ↗</a>
 					</div>
 				</div>
 			</article>
