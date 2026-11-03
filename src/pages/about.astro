@@ -3,16 +3,58 @@ import Layout from '../layouts/BlogPost.astro';
 import { CONTACT_MAIL } from '../consts';
 ---
 
-<Layout title="关于我" description="这个站点是谁做的，为什么做。" pubDate={new Date('2026-11-01')}>
+<Layout title="关于我" description="浙江某不知名学校在读大二，做 AI 应用、桌面工具和全栈网站，找技术合作与实习机会。" pubDate={new Date('2026-11-03')}>
+
 	<p>
-		你好，我是 qwqw。这个站点用 Astro 搭建，静态托管在 GitHub Pages 上，文章写在仓库的
-		<code>src/content/blog/</code> 目录里，用 Markdown 或 MDX。
+		你好，我是 qwqw，浙江某不知名学校在读大二。
 	</p>
 	<p>
-		这里主要放三类东西：课上学到的东西整理成笔记，自己做的项目记录，以及一些没什么用但想写下来的想法。
+		平时习惯把想法做成能跑的东西：网站、桌面工具、AI 应用，从写代码到部署基本一个人走完。
+		这个站点放三类内容——课上知识的整理、项目记录，以及一些想写下来的想法。
+	</p>
+
+	<h2>代表项目</h2>
+
+	<p>
+		<strong>小豚 · 武汉 SPU 城市 AI 接待员</strong><br />
+		SAIG 数命 SPU 国际 AI 大赛参赛作品。用 TypeScript 写的纯静态站，离线可用，回答句句挂出处。
+		<a href="https://xiaotun-wuhan-fy73vgwpmp3.qoder.zone">在线演示</a>。
 	</p>
 	<p>
-		想联系我可以写信到 <a data-mail={CONTACT_MAIL}>邮箱</a>，也可以直接开仓库的 <a
-			href="https://github.com/qwqwgogogo/qwqwgogogo.github.io/issues">Issue</a>。
+		<strong>Ollama Model Manager</strong><br />
+		Windows 桌面应用，Python 写的。加载模型前先预估显存 / CPU 占用，按你的硬件推荐最合适的模型，
+		已打成 exe 发到 Release。
+		<a href="https://github.com/qwqwgogogo/Ollama-Model-Manager">仓库</a>。
+	</p>
+	<p>
+		<strong>SWEF-AT</strong><br />
+		特征选择方法研究：六个异构过滤器打分做稳定性加权融合，再用自适应拐点定保留特征数。
+		实验代码和数据都在仓库里。
+		<a href="https://github.com/qwqwgogogo/SWEF-AT">仓库</a>。
+	</p>
+	<p>
+		除此之外还做过：FastAPI + SQLite 的在线教育平台、React + Ant Design 的营销前端、
+		知识图谱可视化应用，以及给 LLM agent 搭的本地记忆系统。
+	</p>
+
+	<h2>我会的</h2>
+	<ul>
+		<li><strong>后端</strong>：Python（FastAPI）、Node.js</li>
+		<li><strong>前端</strong>：React、TypeScript、Astro、原生 JS</li>
+		<li><strong>AI</strong>：LLM API 集成、Agent 工作流与记忆系统、YOLO 目标检测、本地模型部署（Ollama / ComfyUI）</li>
+		<li><strong>其他</strong>：Git / GitHub Actions、macOS 与 Windows 自动化、数据可视化</li>
+	</ul>
+
+	<h2>找合作 / 找工作</h2>
+	<p>
+		目前大二，希望找这两类机会：
+	</p>
+	<ul>
+		<li><strong>技术合作</strong>：AI 应用、网站 / 工具开发，可以按项目合作</li>
+		<li><strong>实习 / 兼职</strong>：开发岗，远程或浙江本地都行</li>
+	</ul>
+	<p>
+		联系方式：<a data-mail={CONTACT_MAIL}>邮箱</a> ·
+		<a href="https://github.com/qwqwgogogo/qwqwgogogo.github.io/issues">GitHub Issues</a>
 	</p>
 </Layout>
