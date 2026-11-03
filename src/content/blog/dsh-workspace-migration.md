@@ -1,8 +1,10 @@
 ---
 title: 'DeepSeek Harness 工作空间迁移：会话记录为什么会消失'
 description: 'DSH 会话归属靠 realpath(session.cwd)===workspace.path，cwd 存在 .zstd header 里改不了。重命名目录会崩溃，正确做法是符号链接。'
-pubDate: '2026-09-05'
+pubDate: '2026-11-03'
 ---
+> 📅 本文于 2026-11-03 发布到博客，实际产出日期为 2026-09-05。
+
 
 把 DeepSeek Harness（DSH）的工作空间从一个路径迁到另一个路径后，打开发现**会话记录全部消失**。读源码搞清了机制。
 

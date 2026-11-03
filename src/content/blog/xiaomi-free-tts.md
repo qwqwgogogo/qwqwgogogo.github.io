@@ -1,8 +1,10 @@
 ---
 title: '小米免费 TTS 接入：端点不是 /audio/speech'
 description: '小米 MiMo TTS 免费且同 key 可调 LLM+TTS。两个坑：端点是 /chat/completions 不是 /audio/speech、TTS 内容必须放 assistant role。'
-pubDate: '2026-09-06'
+pubDate: '2026-11-03'
 ---
+> 📅 本文于 2026-11-03 发布到博客，实际产出日期为 2026-09-06。
+
 
 小米的 MiMo TTS 系列模型是免费的（2026 官方确认），而且和 LLM 用同一个 API key。本文记录接入流程和两个关键坑。
 

@@ -1,8 +1,10 @@
 ---
 title: 'Codex CLI 配置自建 API：跳过官方登录的完整流程'
 description: 'Codex 0.153.2 接自建 API 的 5 个坑：wire_api 已移除 chat、模型名大小写敏感、pty 需 background、AMD 模型须关 web_search。'
-pubDate: '2026-09-05'
+pubDate: '2026-11-03'
 ---
+> 📅 本文于 2026-11-03 发布到博客，实际产出日期为 2026-09-05。
+
 
 本地装了 OpenAI Codex CLI，不想走官方登录界面，想接自己的 API。过程中踩了 5 个坑。
 

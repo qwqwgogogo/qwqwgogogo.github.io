@@ -1,8 +1,10 @@
 ---
 title: 'Hermes / OpenClaw / DeepSeek Harness 三方记忆架构对比'
 description: '源码级对比三个 AI agent 的记忆系统：Hermes 双文件常驻注入、OpenClaw 梦境晋升+语义检索、DSH 会话持久化。各有优劣。'
-pubDate: '2026-08-15'
+pubDate: '2026-11-03'
 ---
+> 📅 本文于 2026-11-03 发布到博客，实际产出日期为 2026-08-15。
+
 
 三个主流 AI agent 框架的记忆系统设计完全不同。本文基于真实源码逐行阅读，做源码级对比。
 

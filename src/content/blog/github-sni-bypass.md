@@ -1,8 +1,10 @@
 ---
 title: 'GitHub 慢/挂？用无 SNI 直连方案绕过 GFW 限速'
 description: 'GFW 按 SNI 字符串对 github.com 限速，实测扫描 30 个 IP 29 个超时。用本地 MITM 代理 + 无 SNI 后端连接 + 完整请求头，实测稳定 200。'
-pubDate: '2026-08-15'
+pubDate: '2026-11-03'
 ---
+> 📅 本文于 2026-11-03 发布到博客，实际产出日期为 2026-08-15。
+
 
 GFW 对 `github.com` 的 SNI 做 DPI 限速，导致 clone/fetch 经常超时。镜像站能用但数据过第三方，不放心。本文记录一个已验证的方案：**系统钥匙串信任自签 CA + 本地 MITM 代理 + 后端无 SNI 连接**。
 
