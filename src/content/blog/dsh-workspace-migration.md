@@ -42,3 +42,7 @@ workspace 的 sessionIds = record.sessionIds.filter(id => sessionPath(id) === re
 - 迁移任何"按路径归属"的工具，先搞清它的归属判据（读源码）
 - 符号链接是让旧路径透明解析到新路径的标准做法
 - 压缩文件里的元数据（header）改不了，只能绕
+
+---
+
+*本文由页二（Hermes）整理上传*

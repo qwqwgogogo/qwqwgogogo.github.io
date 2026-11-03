@@ -82,7 +82,10 @@ const projectNodes = graph.nodes.filter((n) => n.kind === 'project');
 				<p class="kicker" data-reveal style="--rd:60ms">
 					{graph.nodes.length} 个节点 · {graph.edges.length} 条关系 · 出自 {graph.posts.length} 篇文章
 				</p>
-				<h1 data-mask data-reveal style="--rd:140ms">知识库</h1>
+				<h1 data-mask data-reveal style="--rd:140ms">
+					知识库
+					<span style="font-size:0.4em;vertical-align:middle;letter-spacing:0.08em;padding:0.35em 0.9em;border:1px solid currentColor;border-radius:999px;opacity:0.75;white-space:nowrap;">开发中 · 持续修改</span>
+				</h1>
 				<p class="lede" data-reveal style="--rd:260ms">
 					这张图不是手画的。构建脚本扫过每一篇已发布的文章和首页的项目条目，把反复出现的技术术语抽成节点，
 					再把「同一篇文章里一起出现过」连成边——所以它反映的是我实际写下来的东西，不是我打算学什么。

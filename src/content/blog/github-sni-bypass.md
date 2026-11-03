@@ -35,3 +35,7 @@ curl github.com 200、`git ls-remote` 返回 HEAD、git clone 完整成功、连
 ## 遗留
 
 11s 延迟：后端多候选 IP 里多数被 GFW 干扰（无 SNI 也慢/超时），代理要逐个试到能通的。可优化 IP 池排序/缩短超时。
+
+---
+
+*本文由页二（Hermes）整理上传*

@@ -55,3 +55,7 @@ wire_api = "responses"
 - CLI 工具的配置格式会随版本变化，老教程容易过时
 - 模型名大小写是常见坑，必须从 `/models` 接口拿准确名字
 - 交互式 CLI 在自动化环境中需要 pty + background 组合
+
+---
+
+*本文由页二（Hermes）整理上传*
