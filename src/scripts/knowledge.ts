@@ -10,7 +10,7 @@
  * 由 astro:page-load 每次过渡后重新调用；上一个 WebGL 上下文在换页前 dispose，不然白占浏览器的上下文名额。
  */
 import type { GlHandle, Graph, GraphNode } from './knowledge-gl';
-import { glossHref, kindLabel, metaFor, type Scope } from './kb-copy';
+import { glossHref, kindLabel, metaFor, noGlossLine, type Scope } from './kb-copy';
 
 const el = (tag: string, cls: string, value: string) => {
 	const node = document.createElement(tag);
@@ -113,6 +113,8 @@ async function boot() {
 			from.append('出自 ', a);
 			p.append(from);
 			detail.append(p);
+		} else if (noGlossLine(node)) {
+			detail.append(el('p', 'gloss', noGlossLine(node)!));
 		}
 
 		if (node.posts.length) detail.append(linkList(node.posts, '/blog/'));

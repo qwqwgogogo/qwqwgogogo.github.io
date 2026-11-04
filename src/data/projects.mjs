@@ -29,7 +29,7 @@ export const projects = [
 	},
 	{
 		name: 'SWEF-AT',
-		desc: '稳定性加权的集成特征过滤方法：融合六个异构过滤器打分，再用自适应拐点自动确定保留特征数。配套的论文最后没投出去，仓库里留下的是实验代码和结果数据。',
+		desc: '稳定性加权的集成特征过滤方法：融合六个异构过滤器打分，再用自适应拐点自动确定保留特征数。仓库里是实验代码和结果数据。',
 		tags: 'Python · 研究复现',
 		year: '2025',
 		url: 'https://github.com/qwqwgogogo/SWEF-AT',

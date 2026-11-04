@@ -35,3 +35,12 @@ export function glossHref(gloss: NonNullable<GraphNode['gloss']>) {
 	if (gloss.kind === 'project') return gloss.url ?? '/';
 	return `${gloss.kind === 'note' ? '/notes/' : '/blog/'}${gloss.slug}/`;
 }
+
+/**
+ * 首页项目标签豁免了「必须有原话」这道门槛，但面板不能留白——留白就是骗人说图上每个点都有话。
+ * 这里照实说它为什么在图上，不编定义。
+ */
+export function noGlossLine(node: GraphNode): string | null {
+	if (node.kind !== 'concept' || node.gloss) return null;
+	return '这句原话挑不出来：它只是首页项目条目上写的标签，正文里没单独讲过它。';
+}

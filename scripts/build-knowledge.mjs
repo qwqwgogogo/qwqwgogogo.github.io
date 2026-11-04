@@ -15,7 +15,8 @@
  * 4. 概念在他自己的正文里挑不出一句话解释，就不进图（首页项目标签除外——那是他写的标签，不是概念）。
  *    图上存在的每个词都点得开一句原话，空面板不算「还没补」，算这个词本来就不该在图上；
  * 5. 边只表达真实归属：同一篇里共现的词互连（每篇前 5 名互连，其余挂到本篇第一名），
- *    项目连它的标签，笔记连它的考点，科目连它下面的笔记——所以不会有点飘在太空里；
+ *    项目连它的标签，笔记连它的考点，科目连它下面的笔记——连一条边都算不出来的概念直接丢掉，
+ *    所以不会有点飘在太空里；
  * 6. 坐标用斐波那契球面在构建时算死，前端不做布局，所以刷新不跳位。
  */
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
@@ -497,24 +498,50 @@ function assemble({ key, file, contentDocs, glossDocs, seed, linkProjects, linkN
 		if (g) n.gloss = g;
 	}
 
-	// 没有一句原话可指的概念不进图：点得开一句真话，比多一个空面板有价值
-	const dropped = nodes.filter((n) => n.kind === 'concept' && !n.gloss && !owned.has(n.label.toLowerCase()));
+	// 进图前两道筛子：挑不出原话的不进；进了图连一条关系都算不出来的也不进。
+	// 第二道是后来补的——一个词只在一篇文章里出现过、而那篇没有别的合格术语，它就没有任何归属，
+	// 挂在球面上只是一颗飘着的点，比列表里的一行更没有信息量。
+	const glossGap = (n) => n.kind === 'concept' && !n.gloss && !owned.has(n.label.toLowerCase());
+	const dropped = nodes.filter(glossGap);
+	const orphaned = []; // 有原话但连不出关系的，单独报数：正文里那两个数是分开说的
 	const dropIds = new Set(dropped.map((n) => n.id));
-	const kept = nodes.filter((n) => !dropIds.has(n.id));
-	const reindex = new Map(kept.map((n, i) => [n.id, i]));
-	kept.forEach((n, i) => (n.id = i));
+	nodes.forEach((n) => (n.originId = n.id)); // 下面反复改写 id，边要一直按最初那个 id 映射
+	let kept = nodes.filter((n) => !dropIds.has(n.id));
 
-	const edges = [...edgeWeight.entries()]
-		.filter(([k]) => {
-			const [a, b] = k.split('|').map(Number);
-			return reindex.has(a) && reindex.has(b);
-		})
-		.map(([k, weight]) => {
-			const [a, b] = k.split('|').map(Number);
-			return { a: reindex.get(a), b: reindex.get(b), weight };
+	let edges = [];
+	let degree = new Map();
+	for (let round = 0; ; round++) {
+		const reindex = new Map();
+		kept.forEach((n, i) => {
+			reindex.set(n.originId, i);
+			n.id = i;
 		});
+		edges = [...edgeWeight.entries()]
+			.filter(([k]) => {
+				const [a, b] = k.split('|').map(Number);
+				return reindex.has(a) && reindex.has(b);
+			})
+			.map(([k, weight]) => {
+				const [a, b] = k.split('|').map(Number);
+				return { a: reindex.get(a), b: reindex.get(b), weight };
+			});
+		degree = new Map();
+		edges.forEach((e) => {
+			degree.set(e.a, (degree.get(e.a) ?? 0) + 1);
+			degree.set(e.b, (degree.get(e.b) ?? 0) + 1);
+		});
+		// 去掉孤点会让它的邻居也变孤点，所以整轮重算，而不是就地删
+		const isoNow = kept.filter((n) => n.kind === 'concept' && !degree.get(n.id));
+		if (!isoNow.length || round >= 4) break;
+		const isoIds = new Set(isoNow.map((n) => n.originId));
+		dropped.push(...isoNow);
+		orphaned.push(...isoNow.map((n) => n.label));
+		kept = kept.filter((n) => !isoIds.has(n.originId));
+	}
+	kept.forEach((n) => delete n.originId);
 
-	// 斐波那契球面（黄金角均布）：N 个点均匀撒在球壳上，纯数学，不表达层级
+	// 斐波那契球面（黄金角均布）：N 个点均匀撒在球壳上，纯数学，不表达层级。
+	// 筛完再算坐标，否则球面上会留下本该没有的位置。
 	const golden = Math.PI * (3 - Math.sqrt(5));
 	kept.forEach((n, i) => {
 		const y = 1 - (i / Math.max(kept.length - 1, 1)) * 2;
@@ -525,11 +552,6 @@ function assemble({ key, file, contentDocs, glossDocs, seed, linkProjects, linkN
 		n.z = +(Math.sin(theta) * r * RADIUS).toFixed(2);
 	});
 
-	const degree = new Map();
-	edges.forEach((e) => {
-		degree.set(e.a, (degree.get(e.a) ?? 0) + 1);
-		degree.set(e.b, (degree.get(e.b) ?? 0) + 1);
-	});
 	for (const n of kept) {
 		n.posts = [...new Set(n.posts)];
 		n.notes = [...new Set(n.notes)];
@@ -560,7 +582,7 @@ function assemble({ key, file, contentDocs, glossDocs, seed, linkProjects, linkN
 	console.log(
 		`${key}: ${kept.length} 节点 / ${edges.length} 边（weight>=2 的 ${edges.filter((e) => e.weight >= 2).length} 条）` +
 			` · 孤点 ${iso.length} · 最大度 ${Math.max(0, ...degree.values())}` +
-			` · 概念 ${concepts.length}（筛掉 ${dropped.length} 个没有原话的）· 解释 ${concepts.filter((n) => n.gloss).length}/${concepts.length}`,
+			` · 概念 ${concepts.length}（筛掉 ${dropped.length} 个：挑不出原话 ${dropped.length - orphaned.length}、连不出关系 ${orphaned.length}）· 解释 ${concepts.filter((n) => n.gloss).length}/${concepts.length}`,
 	);
 	console.log(
 		'  节点类别:',
@@ -589,6 +611,6 @@ const exam = assemble({
 	linkNotes: true,
 });
 
-console.log('  筛掉的词（正文里挑不出一句解释）:');
+console.log('  筛掉的词（挑不出原话，或连一条关系都算不出来）:');
 console.log('    文章线:', site.dropped.map((n) => n.label).join(' ') || '无');
 console.log('    408 线:', exam.dropped.map((n) => n.label).join(' ') || '无');

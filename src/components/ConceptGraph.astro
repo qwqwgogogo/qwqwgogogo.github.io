@@ -6,7 +6,7 @@
  * （图里没有它的点，不能给一个点了没反应的按钮）。
  */
 import type { Graph, GraphNode } from '../scripts/knowledge-gl';
-import { glossHref, kindLabel, metaFor } from '../scripts/kb-copy';
+import { glossHref, kindLabel, metaFor, noGlossLine } from '../scripts/kb-copy';
 
 type Section = { title: string; href?: string; items: (GraphNode | { pending: string })[] };
 
@@ -179,13 +179,15 @@ const isNode = (x: GraphNode | { pending: string }): x is GraphNode => 'id' in x
 		<p class="meta">{metaOf(selected)}</p>
 		{selected.kind === 'note' && selected.desc && <p class="gloss">{selected.desc}</p>}
 		{
-			selected.gloss && (
+			selected.gloss ? (
 				<p class="gloss">
 					{selected.gloss.text}
 					<span class="from">
 						出自 <a href={glossHref(selected.gloss)}>{selected.gloss.title}</a>
 					</span>
 				</p>
+			) : (
+				noGlossLine(selected) && <p class="gloss">{noGlossLine(selected)}</p>
 			)
 		}
 		{

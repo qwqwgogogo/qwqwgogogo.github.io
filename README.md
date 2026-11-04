@@ -80,7 +80,7 @@ pubDate: '2026-11-01'
 
 | 路径 | 作用 |
 | --- | --- |
-| `src/consts.ts` | 站点标题、副标题、联系方式常量（解码逻辑在 `src/scripts/contacts.ts`） |
+| `src/consts.ts` | 站点标题、副标题、联系邮箱（明文，静态站的 HTML 本来就挡不住看源码的人） |
 | `src/pages/` | 路由，一文件一路径 |
 | `src/content/blog/`、`src/content/notes/` | 文章与笔记原文 |
 | `src/content.config.ts` | 两个集合的 frontmatter 校验 |

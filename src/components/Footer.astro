@@ -8,7 +8,7 @@ const today = new Date();
 	<div class="inner">
 		<p class="sign">&copy; {today.getFullYear()} qwqw</p>
 		<div class="links">
-			<a data-mail={CONTACT_MAIL}>邮箱</a>
+			<a href={`mailto:${CONTACT_MAIL}`}>{CONTACT_MAIL}</a>
 			<a href="/rss.xml">RSS</a>
 			<a href="https://github.com/qwqwgogogo">GitHub</a>
 		</div>
