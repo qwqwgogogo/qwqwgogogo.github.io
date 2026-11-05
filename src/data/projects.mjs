@@ -5,6 +5,7 @@
  * @property {string} tags
  * @property {string} year
  * @property {string} [url]
+ * @property {boolean} [closed] 没有公开仓库时，在作品行上写明是闭源
  * @property {{ label: string, url: string }} [secondary]
  */
 
@@ -14,6 +15,7 @@ export const projects = [
 	{
 		// 源码仓库已转私有，只挂公开的演示站
 		name: '小豚 · 武汉 SPU 城市 AI 接待员',
+		closed: true,
 		desc: '纯静态、离线可用、句句有出处的城市 AI 接待员。SAIG 数命 SPU 国际 AI 大赛参赛作品。',
 		tags: 'TypeScript · 静态站',
 		year: '2026',

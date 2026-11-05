@@ -1,6 +1,11 @@
 /**
  * 知识库的 3D 场景：只在 /knowledge 页、且 WebGL 可用时才被动态 import，
  * 所以 three.js 不会进首屏那个包。
+ *
+ * 考点那张图有 800 多个点、2600 多条边，所以这里画的东西全是合并过的：点装在一个
+ * InstancedMesh 里，边按粗细分成三组 LineSegments，标签只给连得最多的四十个词。
+ * 一个点一个 mesh、一条边一根圆柱的写法在 150 个点上还跑得动，到 800 个点每帧几千次
+ * draw call，软件渲染实测只剩 2 FPS。
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -39,14 +44,39 @@ const INK = 0x2b2823;
 const RUST = 0xbf3f26;
 const TEAL = 0x2e6b63; // 笔记
 const OLIVE = 0x7a6a2f; // 408 科目
-const FADED = 0xa9a294;
-const HUB = 5; // 连接数到这个级别的才一直挂标签，否则几十个标签糊成一片
+const FADED = 0x8f897c;
+const PAPER = 0xf6f3ec; // 舞台底色：压淡靠「往底色混」做而不是靠透明度，这样点和光环才能合成一份实例数据
+const HUB = 5; // 连接数到这个级别才有资格挂标签，否则几十个标签糊成一片
+const LABEL_CAP = 40; // 挂到四十个封顶，再多就认不出词了
 
 const COLOR: Record<GraphNode['kind'], number> = {
 	concept: INK,
 	project: RUST,
 	note: TEAL,
 	subject: OLIVE,
+};
+
+/** 把 hex 按 k 的比例印到纸上，得到的就是「它只有 k 的不透明度」看着的那个颜色 */
+const onPaper = (hex: number, k: number) => new THREE.Color(hex).lerp(new THREE.Color(PAPER), 1 - k);
+
+const FONT = (size: number) =>
+	`600 ${size}px ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Microsoft YaHei UI', 'PingFang SC', 'Noto Sans SC', sans-serif`;
+const LABEL_PX: Record<GraphNode['kind'], number> = { concept: 24, project: 30, note: 30, subject: 30 };
+
+/** 在一张画布上把字量宽、描出来，返回画布尺寸；调用方决定用新贴图还是重绘旧贴图 */
+const drawText = (c: HTMLCanvasElement, text: string, size: number, dpr: number) => {
+	const ctx = c.getContext('2d')!;
+	ctx.font = FONT(size);
+	const w = Math.ceil(ctx.measureText(text).width + 8);
+	const h = Math.ceil(size * 1.7);
+	c.width = w * dpr;
+	c.height = h * dpr;
+	ctx.scale(dpr, dpr);
+	ctx.font = FONT(size);
+	ctx.textBaseline = 'middle';
+	ctx.fillStyle = '#1d1b18';
+	ctx.fillText(text, 4, h / 2);
+	return { w, h };
 };
 
 export type GlHandle = {
@@ -61,15 +91,14 @@ export function mountGraph(
 	initialId: number,
 ): GlHandle {
 	const animate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const dpr = Math.min(window.devicePixelRatio || 1, 2);
 	const degree = new Map<number, number>();
-	graph.edges.forEach((e) => {
+	const touching = new Map<number, number[]>();
+	graph.edges.forEach((e, i) => {
 		degree.set(e.a, (degree.get(e.a) ?? 0) + e.weight);
 		degree.set(e.b, (degree.get(e.b) ?? 0) + e.weight);
-	});
-	const linked = new Map<number, number[]>();
-	graph.edges.forEach((e) => {
-		(linked.get(e.a) ?? linked.set(e.a, []).get(e.a)!).push(e.b);
-		(linked.get(e.b) ?? linked.set(e.b, []).get(e.b)!).push(e.a);
+		(touching.get(e.a) ?? touching.set(e.a, []).get(e.a)!).push(i);
+		(touching.get(e.b) ?? touching.set(e.b, []).get(e.b)!).push(i);
 	});
 
 	const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -77,7 +106,7 @@ export function mountGraph(
 	canvas.className = 'kb-gl';
 	stage.append(canvas);
 	stage.classList.add('is-3d');
-	renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+	renderer.setPixelRatio(dpr);
 
 	const scene = new THREE.Scene();
 	const camera = new THREE.PerspectiveCamera(60, 1, 1, 2000);
@@ -85,123 +114,150 @@ export function mountGraph(
 	// 再近一点顶上一排标签就被舞台边缘切掉了
 	camera.position.set(0, 0, 285);
 
-	scene.add(new THREE.HemisphereLight(0xffffff, 0xd9d2c3, 2.1));
-	const key = new THREE.DirectionalLight(0xfff6e8, 2.4);
+	scene.add(new THREE.HemisphereLight(0xffffff, 0xd9d2c3, 1.35));
+	const key = new THREE.DirectionalLight(0xfff6e8, 1.7);
 	key.position.set(180, 260, 300);
 	scene.add(key);
 
-	const sphere = new THREE.SphereGeometry(1, 22, 16);
-	const unitCylinder = new THREE.CylinderGeometry(1, 1, 1, 6);
-	const upAxis = new THREE.Vector3(0, 1, 0);
+	// 点密的时候球不必做得很圆：段数减半省的是顶点，看不出差别
+	const dense = graph.nodes.length > 300;
+	const seg = dense ? 12 : 22;
+	const sphere = new THREE.SphereGeometry(1, seg, Math.max(8, Math.round(seg * 0.72)));
+	// 八百个点按原来的半径会把整个球壳糊满（前半球覆盖率算下来接近一半），半径统一缩到七成才有缝
+	const sizeK = dense ? 0.7 : 1;
 
-	type View = {
-		node: GraphNode;
-		radius: number;
-		mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
-		halo?: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
-		label?: THREE.Sprite<THREE.SpriteMaterial>;
-	};
-	const views: View[] = [];
-	const byId = new Map<number, View>();
-	const textures: THREE.CanvasTexture[] = [];
+	type View = { node: GraphNode; index: number; radius: number; pos: THREE.Vector3 };
+	const views: View[] = graph.nodes.map((node, index) => ({
+		node,
+		index,
+		radius: (2.4 + Math.sqrt(degree.get(node.id) ?? 0) * 1.5) * sizeK,
+		pos: new THREE.Vector3(node.x, node.y, node.z),
+	}));
+	const byId = new Map<number, View>(views.map((v) => [v.node.id, v]));
 
-	const makeLabel = (text: string, size: number) => {
-		const dpr = Math.min(window.devicePixelRatio || 1, 2);
+	// —— 点：全部装进一个实例网格 —— //
+	const nodeMesh = new THREE.InstancedMesh(
+		sphere,
+		new THREE.MeshStandardMaterial({ roughness: 0.55, metalness: 0 }),
+		views.length,
+	);
+	const mat4 = new THREE.Matrix4();
+	views.forEach((v) => {
+		mat4.makeScale(v.radius, v.radius, v.radius).setPosition(v.pos);
+		nodeMesh.setMatrixAt(v.index, mat4);
+		nodeMesh.setColorAt(v.index, new THREE.Color(COLOR[v.node.kind]));
+	});
+	nodeMesh.instanceMatrix.needsUpdate = true;
+	nodeMesh.instanceColor!.needsUpdate = true;
+	scene.add(nodeMesh);
+
+	// —— 挂标签的那批：连得最多的前 LABEL_CAP 个 —— //
+	const labelViews = views
+		.filter((v) => (degree.get(v.node.id) ?? 0) >= HUB)
+		.sort((a, b) => (degree.get(b.node.id) ?? 0) - (degree.get(a.node.id) ?? 0))
+		.slice(0, LABEL_CAP);
+	const labelled = new Set(labelViews.map((v) => v.node.id));
+
+	// 它们各带一圈淡淡的光环；选中点自己的光环排在最后，只有它跟着呼吸缩放
+	const haloMesh = new THREE.InstancedMesh(
+		sphere,
+		new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.085, depthWrite: false }),
+		labelViews.length + 1,
+	);
+	const haloR = (v: View) => v.radius * 1.62;
+	labelViews.forEach((v, i) => {
+		const r = haloR(v);
+		mat4.makeScale(r, r, r).setPosition(v.pos);
+		haloMesh.setMatrixAt(i, mat4);
+	});
+	const selHalo = labelViews.length;
+	mat4.makeScale(1, 1, 1).setPosition(0, 1e6, 0);
+	haloMesh.setMatrixAt(selHalo, mat4);
+	haloMesh.instanceMatrix.needsUpdate = true;
+	scene.add(haloMesh);
+
+	const textures: THREE.Texture[] = [];
+	const sprites = labelViews.map((v) => {
+		const size = LABEL_PX[v.node.kind];
 		const c = document.createElement('canvas');
-		const ctx = c.getContext('2d')!;
-		const font = `600 ${size}px ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Microsoft YaHei UI', 'PingFang SC', 'Noto Sans SC', sans-serif`;
-		ctx.font = font;
-		const w = Math.ceil(ctx.measureText(text).width + 8);
-		const h = Math.ceil(size * 1.7);
-		c.width = w * dpr;
-		c.height = h * dpr;
-		ctx.scale(dpr, dpr);
-		ctx.font = font;
-		ctx.textBaseline = 'middle';
-		ctx.fillStyle = '#1d1b18';
-		ctx.fillText(text, 4, h / 2);
+		const { w, h } = drawText(c, v.node.label, size, dpr);
 		const tex = new THREE.CanvasTexture(c);
 		tex.colorSpace = THREE.SRGBColorSpace;
 		textures.push(tex);
-		return { tex, aspect: w / h, height: size };
-	};
+		const world = size * 0.3;
+		const sprite = new THREE.Sprite(
+			new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0.3 }),
+		);
+		sprite.scale.set(world * (w / h), world, 1);
+		sprite.center.set(0.5, 0);
+		sprite.position.copy(v.pos).add(new THREE.Vector3(0, v.radius + world * 0.75, 0));
+		scene.add(sprite);
+		return { v, sprite };
+	});
 
-	for (const node of graph.nodes) {
-		const d = degree.get(node.id) ?? 0;
-		const radius = 2.4 + Math.sqrt(d) * 1.5;
-		const color = COLOR[node.kind];
-		const material = new THREE.MeshStandardMaterial({
-			color,
-			roughness: 0.55,
-			metalness: 0,
-			emissive: color,
-			emissiveIntensity: node.kind === 'concept' ? 0.1 : 0.2,
-			transparent: true,
-		});
-		const mesh = new THREE.Mesh(sphere, material);
-		mesh.scale.setScalar(radius);
-		mesh.position.set(node.x, node.y, node.z);
-		mesh.userData.id = node.id;
-		scene.add(mesh);
-
-		const view: View = { node, radius, mesh };
-		if (d >= HUB) {
-			const halo = new THREE.Mesh(
-				sphere,
-				new THREE.MeshBasicMaterial({
-					color,
-					transparent: true,
-					opacity: 0.085,
-					depthWrite: false,
-				}),
-			);
-			halo.scale.setScalar(radius * 1.62);
-			halo.position.copy(mesh.position);
-			scene.add(halo);
-			view.halo = halo;
+	// 选中的词不一定在挂标签的那四十个里，所以再留一张会重绘的：一张画布一个贴图，换词只改内容
+	const selCanvas = document.createElement('canvas');
+	const selTex = new THREE.CanvasTexture(selCanvas);
+	selTex.colorSpace = THREE.SRGBColorSpace;
+	textures.push(selTex);
+	const selSprite = new THREE.Sprite(
+		new THREE.SpriteMaterial({ map: selTex, transparent: true, depthWrite: false, opacity: 0 }),
+	);
+	selSprite.center.set(0.5, 0);
+	scene.add(selSprite);
+	const drawSel = (v: View | undefined) => {
+		if (!v || labelled.has(v.node.id)) {
+			selSprite.material.opacity = 0;
+			return;
 		}
-		const size = node.kind === 'concept' ? 24 : 30;
-		const { tex, aspect, height } = makeLabel(node.label, size);
-		const label = new THREE.Sprite(
-			new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0 }),
-		);
-		const world = height * 0.3;
-		label.scale.set(world * aspect, world, 1);
-		label.position.copy(mesh.position).add(new THREE.Vector3(0, radius + world * 0.75, 0));
-		label.center.set(0.5, 0);
-		scene.add(label);
-		view.label = label;
-
-		views.push(view);
-		byId.set(node.id, view);
-	}
-
-	type EdgeView = {
-		mesh: THREE.Mesh<THREE.CylinderGeometry, THREE.MeshBasicMaterial>;
-		base: number;
-		touches: number[];
+		const size = LABEL_PX[v.node.kind];
+		const { w, h } = drawText(selCanvas, v.node.label, size, dpr);
+		selTex.needsUpdate = true;
+		const world = size * 0.3;
+		selSprite.scale.set(world * (w / h), world, 1);
+		selSprite.position.copy(v.pos).add(new THREE.Vector3(0, v.radius + world * 0.75, 0));
+		selSprite.material.opacity = 0.95;
 	};
-	const edgeViews: EdgeView[] = [];
-	for (const e of graph.edges) {
-		const a = byId.get(e.a);
-		const b = byId.get(e.b);
-		if (!a || !b) continue;
-		const from = a.mesh.position;
-		const to = b.mesh.position;
-		const dir = new THREE.Vector3().subVectors(to, from);
-		const len = dir.length();
-		const base = e.weight >= 2 ? 0.34 : 0.16;
-		const mesh = new THREE.Mesh(
-			unitCylinder,
-			new THREE.MeshBasicMaterial({ color: INK, transparent: true, opacity: base }),
+
+	// —— 边：三组线段。淡的、粗的、跟选中那个点相关的；重画只搬顶点和改画到第几个 —— //
+	const xyz = new Float32Array(graph.edges.length * 6);
+	graph.edges.forEach((e, i) => {
+		const a = byId.get(e.a)?.pos;
+		const b = byId.get(e.b)?.pos;
+		if (a && b) xyz.set([a.x, a.y, a.z, b.x, b.y, b.z], i * 6);
+	});
+	const lightSet: number[] = [];
+	const strongSet: number[] = [];
+	graph.edges.forEach((e, i) => (e.weight >= 2 ? strongSet : lightSet).push(i));
+	const maxTouch = Math.max(1, ...[...touching.values()].map((list) => list.length));
+	const line = (n: number, color: number, opacity: number) => {
+		const geo = new THREE.BufferGeometry();
+		geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 6), 3));
+		const mesh = new THREE.LineSegments(
+			geo,
+			new THREE.LineBasicMaterial({ color, transparent: true, opacity }),
 		);
-		const r = e.weight >= 2 ? 0.62 : 0.3;
-		mesh.scale.set(r, len, r);
-		mesh.position.copy(from).addScaledVector(dir, 0.5);
-		mesh.quaternion.setFromUnitVectors(upAxis, dir.normalize());
+		// 顶点是一批批重填的，包围盒还停在旧数据上，所以不做视锥剔除
+		mesh.frustumCulled = false;
 		scene.add(mesh);
-		edgeViews.push({ mesh, base, touches: [e.a, e.b] });
-	}
+		return mesh;
+	};
+	const lightMesh = line(lightSet.length, INK, 0.2);
+	const strongMesh = line(strongSet.length, INK, 0.46);
+	const hotMesh = line(maxTouch, RUST, 0.55);
+	const hot = new Uint8Array(graph.edges.length);
+	const fill = (mesh: THREE.LineSegments, list: number[], skipHot: boolean) => {
+		const attr = mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+		const arr = attr.array as Float32Array;
+		let n = 0;
+		for (const i of list) {
+			if (skipHot && hot[i]) continue;
+			arr.set(xyz.subarray(i * 6, i * 6 + 6), n * 6);
+			n++;
+		}
+		mesh.geometry.setDrawRange(0, n * 2);
+		attr.needsUpdate = true;
+	};
 
 	const controls = new OrbitControls(camera, canvas);
 	controls.enableDamping = true;
@@ -217,37 +273,50 @@ export function mountGraph(
 	let selectedId = initialId;
 	let hoveredId: number | null = null;
 	let idleTimer = 0;
+	let dirty = true;
+	let needsRender = true;
+	let inView = true;
+	let visible = !document.hidden;
+	let raf = 0;
 
-	const paint = (time: number) => {
-		const near = new Set(linked.get(selectedId) ?? []);
+	/** 选中或悬停变了才跑：搬颜色、搬顶点，一帧之内不重复 */
+	const repaint = () => {
+		const hotEdges = touching.get(selectedId) ?? [];
+		hot.fill(0);
+		const nearIds = new Set<number>();
+		for (const i of hotEdges) {
+			hot[i] = 1;
+			const e = graph.edges[i];
+			nearIds.add(e.a === selectedId ? e.b : e.a);
+		}
+
 		for (const v of views) {
-			const isSel = v.node.id === selectedId;
-			const isHot = v.node.id === hoveredId;
-			const inSet = isSel || isHot || near.has(v.node.id);
-			const target = inSet ? COLOR[v.node.kind] : FADED;
-			v.mesh.material.color.setHex(target);
-			v.mesh.material.emissive.setHex(target);
-			v.mesh.material.opacity = inSet ? 1 : 0.42;
-			v.mesh.material.emissiveIntensity = isSel ? 0.4 : inSet ? 0.16 : 0.04;
-			if (v.halo) v.halo.material.opacity = inSet ? 0.075 : 0;
-			const pulse = animate && isSel ? 1 + Math.sin(time * 0.0024) * 0.07 : 1;
-			v.mesh.scale.setScalar(v.radius * pulse * (isHot ? 1.14 : 1));
-			if (v.label) {
-				const isHub = (degree.get(v.node.id) ?? 0) >= HUB;
-				// 被压暗的词标签也跟着压暗，不然「浅灰点 + 黑字」看着像没选中却又最显眼
-				v.label.material.opacity = inSet ? 0.95 : isHub ? 0.3 : 0;
-			}
+			const inSet = v.node.id === selectedId || v.node.id === hoveredId || nearIds.has(v.node.id);
+			nodeMesh.setColorAt(v.index, onPaper(inSet ? COLOR[v.node.kind] : FADED, inSet ? 1 : 0.8));
 		}
-		for (const ev of edgeViews) {
-			const on = ev.touches.includes(selectedId);
-			ev.mesh.material.opacity = on ? Math.max(ev.base, 0.42) : ev.base * 0.45;
-			ev.mesh.material.color.setHex(on ? RUST : INK);
+		nodeMesh.instanceColor!.needsUpdate = true;
+
+		labelViews.forEach((v, i) => {
+			const inSet = v.node.id === selectedId || nearIds.has(v.node.id);
+			// 不亮的时候把光环染成纸色：它没有逐实例的透明度，混到纸上就是不显眼
+			haloMesh.setColorAt(i, new THREE.Color(inSet ? COLOR[v.node.kind] : PAPER));
+		});
+		haloMesh.instanceColor!.needsUpdate = true;
+
+		for (const { v, sprite } of sprites) {
+			const inSet = v.node.id === selectedId || nearIds.has(v.node.id);
+			// 被压暗的词也跟着压暗，不然「浅灰点 + 黑字」看着像没选中却又最显眼
+			sprite.material.opacity = inSet ? 0.95 : 0.42;
 		}
+
+		fill(lightMesh, lightSet, true);
+		fill(strongMesh, strongSet, true);
+		fill(hotMesh, hotEdges, false);
+		drawSel(byId.get(selectedId));
 	};
 
 	const ray = new THREE.Raycaster();
 	const pointer = new THREE.Vector2();
-	const meshes = views.map((v) => v.mesh);
 	let down: { x: number; y: number } | null = null;
 
 	const pick = (event: PointerEvent) => {
@@ -255,8 +324,8 @@ export function mountGraph(
 		pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
 		pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 		ray.setFromCamera(pointer, camera);
-		const hit = ray.intersectObjects(meshes, false)[0];
-		return (hit?.object.userData.id as number) ?? null;
+		const index = ray.intersectObject(nodeMesh, false)[0]?.instanceId;
+		return index === undefined ? null : (views[index]?.node.id ?? null);
 	};
 
 	const onMove = (event: PointerEvent) => {
@@ -264,7 +333,7 @@ export function mountGraph(
 		if (id === hoveredId) return;
 		hoveredId = id;
 		canvas.style.cursor = id === null ? 'grab' : 'pointer';
-		invalidate();
+		dirty = true;
 	};
 	const onDown = (event: PointerEvent) => {
 		down = { x: event.clientX, y: event.clientY };
@@ -285,25 +354,32 @@ export function mountGraph(
 	canvas.addEventListener('pointermove', onMove);
 	canvas.addEventListener('pointerdown', onDown);
 	canvas.addEventListener('pointerup', onUp);
-
-	let dirty = true;
-	let inView = true;
-	let visible = !document.hidden;
-	let raf = 0;
-	const invalidate = () => {
-		dirty = true;
-	};
-	controls.addEventListener('change', invalidate);
+	controls.addEventListener('change', () => {
+		needsRender = true;
+	});
 
 	const loop = (time: number) => {
 		raf = requestAnimationFrame(loop);
 		if (!inView || !visible) return;
-		// 只在「还在动」的时候画一帧：离屏、标签页隐藏、或用户没在拖且关了动效，都不占 GPU
-		const moved = controls.update() === true;
-		const pulsing = animate;
-		if (!dirty && !moved && !pulsing) return;
-		dirty = false;
-		paint(time);
+		if (dirty) {
+			dirty = false;
+			repaint();
+			needsRender = true;
+		}
+		// 只有选中的那一个点在呼吸，所以每帧只改它一个矩阵，不碰整份实例数据
+		const sel = byId.get(selectedId);
+		if (sel && animate) {
+			const pulse = 1 + Math.sin(time * 0.0024) * 0.07;
+			const r = haloR(sel) * pulse;
+			mat4.makeScale(r, r, r).setPosition(sel.pos);
+			haloMesh.setMatrixAt(selHalo, mat4);
+			haloMesh.instanceMatrix.needsUpdate = true;
+			needsRender = true;
+		}
+		// 机位没动、也没要重画的東西，这一帧就不占 GPU
+		if (!needsRender && controls.update() !== true) return;
+		needsRender = false;
+		controls.update();
 		renderer.render(scene, camera);
 	};
 
@@ -314,7 +390,7 @@ export function mountGraph(
 		camera.aspect = w / h;
 		camera.updateProjectionMatrix();
 		renderer.setSize(w, h, false);
-		invalidate();
+		dirty = true;
 	};
 	const ro = new ResizeObserver(resize);
 	ro.observe(stage);
@@ -326,7 +402,7 @@ export function mountGraph(
 	vio.observe(stage);
 	const onVisibility = () => {
 		visible = !document.hidden;
-		invalidate();
+		needsRender = true;
 	};
 	document.addEventListener('visibilitychange', onVisibility);
 
@@ -335,7 +411,7 @@ export function mountGraph(
 	return {
 		select: (id: number) => {
 			selectedId = id;
-			invalidate();
+			dirty = true;
 		},
 		dispose: () => {
 			cancelAnimationFrame(raf);
@@ -348,14 +424,15 @@ export function mountGraph(
 			canvas.removeEventListener('pointerup', onUp);
 			controls.dispose();
 			textures.forEach((t) => t.dispose());
-			sphere.dispose();
-			unitCylinder.dispose();
-			views.forEach((v) => {
-				v.mesh.material.dispose();
-				v.halo?.material.dispose();
-				v.label?.material.dispose();
+			sprites.forEach(({ sprite }) => sprite.material.dispose());
+			selSprite.material.dispose();
+			nodeMesh.material.dispose();
+			haloMesh.material.dispose();
+			[lightMesh, strongMesh, hotMesh].forEach((m) => {
+				m.material.dispose();
+				m.geometry.dispose();
 			});
-			edgeViews.forEach((e) => e.mesh.material.dispose());
+			sphere.dispose();
 			renderer.dispose();
 			stage.classList.remove('is-3d');
 			canvas.remove();

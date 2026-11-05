@@ -76,6 +76,7 @@ const handle = 'qwqwgogogo';
 								<div class="side">
 									{p.secondary && <a href={p.secondary.url}>{p.secondary.label}</a>}
 									{p.url && <a href={p.url}>仓库</a>}
+									{p.closed && <span class="norepo">源码闭源</span>}
 									<span class="yr">{p.year}</span>
 								</div>
 							</li>
@@ -280,6 +281,11 @@ const handle = 'qwqwgogogo';
 		font-family: var(--font-mono);
 		font-size: 0.72rem;
 		color: rgba(var(--gray), 60%);
+	}
+	.rows .norepo {
+		font-size: 0.78rem;
+		color: rgba(var(--gray), 75%);
+		white-space: nowrap;
 	}
 
 	/* ---------- 文章行 ---------- */

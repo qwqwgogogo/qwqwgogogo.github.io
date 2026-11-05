@@ -56,6 +56,30 @@ const hrefOf = (slug: string) => (graph.notes.some((d) => d.slug === slug) ? `/n
 const metaOf = (n: GraphNode) =>
 	metaFor(n, scope, neighbors(n.id).length, n.subject ? subjectOf.get(n.subject) : undefined);
 const isNode = (x: GraphNode | { pending: string }): x is GraphNode => 'id' in x;
+
+// 平面版的画法：边和点各汇成几条 path，而不是一个点一个元素。
+// 825 个点加 2621 条边如果各给一个标签，这张页的 HTML 是 601KB、三千多个 DOM 节点，
+// 手机上进这一页光解析就够卡一下；汇成 path 之后同样的图剩下几万字符。
+const rOf = (n: GraphNode) => 1.6 + Math.min(deg(n), 14) * 0.22;
+const at = (id: number) => pts.get(id)!;
+const edgeD = (list: typeof graph.edges) =>
+	list.map((e) => {
+		const a = at(e.a);
+		const b = at(e.b);
+		return `M${a.sx} ${a.sy}L${b.sx} ${b.sy}`;
+	}).join('');
+// 小圆点画成「零长度的一段 + 圆头」，一个点只花十几个字符，粗细就是点直径。
+// 考点按连得多不多分三档；科目、笔记、项目只有百来个点，还是各画各的圆，颜色才对得上图例。
+const conceptDot = (pick: (d: number) => boolean) =>
+	graph.nodes
+		.filter((n) => n.kind === 'concept' && pick(rOf(n)))
+		.map((n) => {
+			const p = at(n.id);
+			return `M${p.sx} ${p.sy}h.01`;
+		})
+		.join('');
+const otherNodes = graph.nodes.filter((n) => n.kind !== 'concept');
+const hubSet = new Set(hubs);
 ---
 
 <div class="stage" data-stage>
@@ -64,46 +88,38 @@ const isNode = (x: GraphNode | { pending: string }): x is GraphNode => 'id' in x
 		viewBox={`0 0 ${W} ${W}`}
 		preserveAspectRatio="xMidYMid meet"
 		role="group"
-		aria-label="概念图的平面版本，里面的点可以选"
+		aria-label="概念图的平面版本，连得最多的词可以选"
 	>
 		<title>概念图的平面版本（按构建时算好的坐标绘制）</title>
+		<path class="edge" d={edgeD(graph.edges.filter((e) => e.weight < 2))} />
+		<path class="edge strong" d={edgeD(graph.edges.filter((e) => e.weight >= 2))} />
+		<path class="dots" d={conceptDot((d) => d < 2.6)} stroke-width="4" />
+		<path class="dots" d={conceptDot((d) => d >= 2.6 && d < 3.9)} stroke-width="6.4" />
+		<path class="dots" d={conceptDot((d) => d >= 3.9)} stroke-width="9.4" />
 		{
-			graph.edges.map((e) => {
-				const a = pts.get(e.a)!;
-				const b = pts.get(e.b)!;
-				return (
-					<line
-						class={`edge${e.weight >= 2 ? ' strong' : ''}`}
-						stroke-width={e.weight >= 2 ? 1.1 : 0.5}
-						x1={a.sx}
-						y1={a.sy}
-						x2={b.sx}
-						y2={b.sy}
-					/>
-				);
+			otherNodes.map((n) => {
+				const p = at(n.id);
+				return <circle class={`node ${n.kind}`} cx={p.sx} cy={p.sy} r={rOf(n).toFixed(2)} />;
 			})
 		}
 		{
-			graph.nodes.map((n) => {
-				const p = pts.get(n.id)!;
-				return (
-					<g
-						data-node-id={n.id}
-						class="pick"
-						role="button"
-						tabindex="0"
-						aria-label={`${n.label}，${kindLabel(n.kind, scope)}`}
-					>
-						<circle
-							class={`node${n.kind === 'concept' ? '' : ` ${n.kind}`}`}
-							cx={p.sx}
-							cy={p.sy}
-							r={(1.6 + Math.min(deg(n), 14) * 0.22).toFixed(2)}
-						/>
-						{hubs.includes(n.id) && <text class="tag" x={p.sx + 4} y={p.sy - 3}>{n.label}</text>}
-					</g>
-				);
-			})
+			graph.nodes
+				.filter((n) => hubSet.has(n.id))
+				.map((n) => {
+					const p = pts.get(n.id)!;
+					return (
+						<g
+							data-node-id={n.id}
+							class="pick"
+							role="button"
+							tabindex="0"
+							aria-label={`${n.label}，${kindLabel(n.kind, scope)}`}
+						>
+							<circle class="hit" cx={p.sx} cy={p.sy} r={(rOf(n) + 4).toFixed(1)} />
+							<text class="tag" x={p.sx + 4} y={p.sy - 3}>{n.label}</text>
+						</g>
+					);
+				})
 		}
 	</svg>
 	<p class="hint">
@@ -246,10 +262,18 @@ const isNode = (x: GraphNode | { pending: string }): x is GraphNode => 'id' in x
 		display: none;
 	}
 	.flat .edge {
+		fill: none;
 		stroke: rgba(23, 22, 26, 0.16);
 	}
 	.flat .edge.strong {
 		stroke: rgba(23, 22, 26, 0.4);
+	}
+	/* 汇成一条 path 的考点：靠圆头的零长度线段当点，粗细就是直径 */
+	.flat .dots {
+		fill: none;
+		stroke: rgb(var(--black));
+		stroke-linecap: round;
+		opacity: 0.62;
 	}
 	.flat .node {
 		fill: rgb(var(--black));
@@ -268,14 +292,21 @@ const isNode = (x: GraphNode | { pending: string }): x is GraphNode => 'id' in x
 		font-size: 7px;
 		fill: rgba(23, 22, 26, 0.72);
 	}
-	/* 降级版也得能用键盘走：SVG 的 <g> 上 tabindex，焦点画在点上 */
+	/* 降级版也得能用键盘走：可点的那十几个词各盖一个透明的命中圆 */
 	.flat .pick {
 		cursor: pointer;
 		outline: none;
 	}
-	.flat .pick:focus-visible circle {
+	.flat .pick .hit {
+		fill: transparent;
+	}
+	.flat .pick:hover .hit {
+		fill: rgba(191, 63, 38, 0.12);
+	}
+	.flat .pick:focus-visible .hit {
 		stroke: var(--accent);
-		stroke-width: 2.5;
+		stroke-width: 1.6;
+		fill: rgba(191, 63, 38, 0.12);
 	}
 	.legend {
 		display: flex;
