@@ -110,9 +110,15 @@ export function mountGraph(
 
 	const scene = new THREE.Scene();
 	const camera = new THREE.PerspectiveCamera(60, 1, 1, 2000);
-	// 球壳半径 120；机位 285 是量出来的——近处（z 接近 +120）的点被透视放大到 1.5 倍以上，
-	// 再近一点顶上一排标签就被舞台边缘切掉了
-	camera.position.set(0, 0, 285);
+	// 球壳半径 120，标签再往上顶出一截，所以竖直方向要装下 154、水平方向 140。
+	// 机位不能写死：桌面舞台是横的（宽高比 1.5），手机是竖的（0.72），
+	// 同一个距离下水平可视半宽只有 0.577·d·aspect，手机上算出来 118 < 120，球被左右切掉。
+	// 1.06 这个余量是照着原来量出来的 285 反推的——代回桌面宽高比正好得到 283。
+	const halfTan = Math.tan(((camera.fov * Math.PI) / 180) / 2);
+	const fitDistance = (aspect: number) =>
+		1.06 * Math.max(154 / halfTan, 140 / (halfTan * Math.max(0.35, aspect)));
+	let fit = fitDistance(1.5);
+	camera.position.set(0, 0, fit);
 
 	scene.add(new THREE.HemisphereLight(0xffffff, 0xd9d2c3, 1.35));
 	const key = new THREE.DirectionalLight(0xfff6e8, 1.7);
@@ -387,10 +393,16 @@ export function mountGraph(
 		const w = stage.clientWidth;
 		const h = stage.clientHeight;
 		if (!w || !h) return;
-		camera.aspect = w / h;
+		const aspect = w / h;
+		const prevFit = fit;
+		fit = fitDistance(aspect);
+		camera.aspect = aspect;
 		camera.updateProjectionMatrix();
 		renderer.setSize(w, h, false);
+		// 用户自己滚过轮子就别抢他的取景；还停在自动距离上（差 2% 以内）的跟着重新算
+		if (Math.abs(camera.position.length() / prevFit - 1) < 0.02) camera.position.setLength(fit);
 		dirty = true;
+		needsRender = true;
 	};
 	const ro = new ResizeObserver(resize);
 	ro.observe(stage);

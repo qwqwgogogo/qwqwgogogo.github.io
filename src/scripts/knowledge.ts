@@ -170,6 +170,14 @@ async function boot() {
 				.filter((n): n is GraphNode => Boolean(n)),
 		);
 		for (const b of buttons) b.setAttribute('aria-current', String(Number(b.dataset.nodeId) === id));
+		/*
+		 * 窄屏一列、面板不吸顶（吸顶会盖住下面的胶囊列表），所以点深处的胶囊时
+		 * 解释可能已经滚到视口上方。只在它整个跑出视野时才把它拉回来——
+		 * 用户自己滚到的位置不该被抢走。
+		 */
+		if (window.innerWidth <= 860 && detail.getBoundingClientRect().bottom < 140) {
+			detail.scrollIntoView({ block: 'start', behavior: 'smooth' });
+		}
 		gl?.select(id);
 	};
 

@@ -455,6 +455,21 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 				font-size: 0.62rem;
 				color: rgba(var(--gray), 65%);
 			}
+			.demo .hint i {
+				font-style: normal;
+			}
+			.demo .hint .tch {
+				display: none;
+			}
+			/* 触屏上没有 hover，标签得改口说「点按」 */
+			@media (hover: none), (pointer: coarse) {
+				.demo .hint .ptr {
+					display: none;
+				}
+				.demo .hint .tch {
+					display: inline;
+				}
+			}
 			.s-text {
 				margin: 0;
 				font-family: var(--font-serif-cjk);
@@ -506,8 +521,8 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 			.demo[data-demo='slide-in'] .s-text {
 				transform: translate3d(-16px, 0, 0);
 			}
-			.demo[data-demo='fade-up']:hover .s-text,
-			.demo[data-demo='slide-in']:hover .s-text {
+			.demo[data-demo='fade-up']:is(:hover, .is-hot) .s-text,
+			.demo[data-demo='slide-in']:is(:hover, .is-hot) .s-text {
 				animation: fx-up 0.7s var(--e-expo) both;
 			}
 			@keyframes fx-up {
@@ -523,7 +538,7 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 			.demo[data-demo='line-mask'] .s-text {
 				clip-path: inset(0 0 calc(100% - 2px) 0);
 			}
-			.demo[data-demo='line-mask']:hover .s-text {
+			.demo[data-demo='line-mask']:is(:hover, .is-hot) .s-text {
 				animation: fx-mask 0.9s var(--e-expo) both;
 			}
 			@keyframes fx-mask {
@@ -540,16 +555,16 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 			.demo[data-demo='paper-ink'] i {
 				opacity: 0.25;
 			}
-			.demo[data-demo='stagger']:hover i {
+			.demo[data-demo='stagger']:is(:hover, .is-hot) i {
 				animation: fx-pop 0.5s var(--e-out) both;
 			}
-			.demo[data-demo='stagger']:hover i:nth-child(2) {
+			.demo[data-demo='stagger']:is(:hover, .is-hot) i:nth-child(2) {
 				animation-delay: 90ms;
 			}
-			.demo[data-demo='stagger']:hover i:nth-child(3) {
+			.demo[data-demo='stagger']:is(:hover, .is-hot) i:nth-child(3) {
 				animation-delay: 180ms;
 			}
-			.demo[data-demo='stagger']:hover i:nth-child(4) {
+			.demo[data-demo='stagger']:is(:hover, .is-hot) i:nth-child(4) {
 				animation-delay: 270ms;
 			}
 			@keyframes fx-pop {
@@ -566,9 +581,9 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 				transform: scaleX(0);
 				transform-origin: left;
 			}
-			.demo[data-demo='rule-wipe']:hover .s-rule,
-			.demo[data-demo='scroll-progress']:hover .s-rule,
-			.demo[data-demo='scroll-timeline']:hover .s-rule {
+			.demo[data-demo='rule-wipe']:is(:hover, .is-hot) .s-rule,
+			.demo[data-demo='scroll-progress']:is(:hover, .is-hot) .s-rule,
+			.demo[data-demo='scroll-timeline']:is(:hover, .is-hot) .s-rule {
 				animation: fx-wipe 0.9s var(--e-expo) both;
 			}
 			@keyframes fx-wipe {
@@ -584,7 +599,7 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 				font-size: 1.05rem;
 				letter-spacing: 0.14em;
 			}
-			.demo[data-demo='scramble']:hover .s-text {
+			.demo[data-demo='scramble']:is(:hover, .is-hot) .s-text {
 				animation: fx-flick 0.34s steps(2) 3;
 			}
 			@keyframes fx-flick {
@@ -599,7 +614,7 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 				background-repeat: no-repeat;
 				transition: background-size 0.5s var(--e-expo);
 			}
-			.demo[data-demo='underline-sweep']:hover .s-text {
+			.demo[data-demo='underline-sweep']:is(:hover, .is-hot) .s-text {
 				background-size: 100% 1px;
 			}
 			.demo[data-demo='row-spotlight'] {
@@ -609,10 +624,10 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 					transparent 70%
 				);
 			}
-			.demo[data-demo='row-spotlight']:hover {
+			.demo[data-demo='row-spotlight']:is(:hover, .is-hot) {
 				--mx: 72%;
 			}
-			.demo[data-demo='hover-lift']:hover .s-box {
+			.demo[data-demo='hover-lift']:is(:hover, .is-hot) .s-box {
 				transform: translate3d(0, -3px, 0);
 				box-shadow: 0 14px 24px -18px rgba(23, 22, 26, 40%);
 			}
@@ -621,7 +636,7 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 					transform 0.3s var(--e-out),
 					box-shadow 0.3s var(--e-out);
 			}
-			.demo[data-demo='magnetic']:hover .s-box {
+			.demo[data-demo='magnetic']:is(:hover, .is-hot) .s-box {
 				transform: translate3d(10px, 0, 0);
 			}
 			.demo[data-demo='magnetic'] .s-box {
@@ -640,7 +655,7 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 			.demo[data-demo='parallax'] .s-box {
 				background: #fffdf8;
 			}
-			.demo[data-demo='parallax']:hover .s-box {
+			.demo[data-demo='parallax']:is(:hover, .is-hot) .s-box {
 				transform: translate3d(0, -9px, 0);
 			}
 			.demo[data-demo='parallax'] .s-box {
@@ -668,7 +683,7 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 				height: 26px;
 				background: #fffdf8;
 			}
-			.demo[data-demo='sticky-col']:hover .s-box {
+			.demo[data-demo='sticky-col']:is(:hover, .is-hot) .s-box {
 				animation: fx-sticky 1.5s var(--e-out) both;
 			}
 			@keyframes fx-sticky {
@@ -779,7 +794,7 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 			.demo[data-demo='view-transition'] .s-text {
 				transition: opacity 0.4s var(--e-out);
 			}
-			.demo[data-demo='view-transition']:hover .s-text {
+			.demo[data-demo='view-transition']:is(:hover, .is-hot) .s-text {
 				animation: fx-vt 1.1s var(--e-out) both;
 			}
 			@keyframes fx-vt {
@@ -849,7 +864,7 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 			.demo[data-demo='flip'] .s-box {
 				transition: none;
 			}
-			.demo[data-demo='flip']:hover .s-box {
+			.demo[data-demo='flip']:is(:hover, .is-hot) .s-box {
 				animation: fx-flip 0.9s var(--e-expo) both;
 			}
 			@keyframes fx-flip {
@@ -1040,7 +1055,10 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 											{looping.has(e.id)
 												? '循环在跑'
 												: e.status === 'used'
-													? '悬停重播'
+													? <>
+															<i class="ptr">悬停重播</i>
+															<i class="tch">点按重播</i>
+														</>
 													: e.status === 'none'
 														? '示例'
 														: '这就是我不做的那版'}
@@ -1175,5 +1193,21 @@ const looping = new Set(['grain', 'ambient-orbs', 'marquee', 'ken-burns', 'skele
 			</div>
 		</main>
 		<Footer />
+		<script>
+			// 触屏没有 hover，靠悬停触发的那十几个演示在手机上等于摆设。
+			// 点一下给 .demo 挂 .is-hot，样式里每个 :hover 都写成 :is(:hover, .is-hot)，
+			// 鼠标和手指因此走的是同一条规则。
+			// 监听挂在 document 上：ClientRouter 换页会重建 DOM，而模块脚本只执行一次，
+			// 事件委托是唯一两边都成立的写法。
+			if (matchMedia('(hover: none), (pointer: coarse)').matches) {
+				addEventListener('click', (e) => {
+					const demo = e.target instanceof Element ? e.target.closest('.demo') : null;
+					if (!demo) return;
+					const on = demo.classList.contains('is-hot');
+					document.querySelector('.demo.is-hot')?.classList.remove('is-hot');
+					if (!on) demo.classList.add('is-hot');
+				});
+			}
+		</script>
 	</body>
 </html>

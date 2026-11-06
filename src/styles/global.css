@@ -160,6 +160,64 @@ hr {
 	main {
 		padding: 1em;
 	}
+	/*
+	 * 中文没有词间断点，四列的 markdown 表格在 390px 上会被挤成一列一个字（竖排）。
+	 * 只给 table 加 overflow-x 不够：display:block 之后里面的匿名表格盒仍按 100% 算，
+	 * 而它的 min-content 宽度就是「每列一个字」。所以同时给单元格一个最小宽度，
+	 * 让 min-content 真的超过视口，横向滚动才成立。
+	 */
+	table {
+		display: block;
+		width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+	th,
+	td {
+		min-width: 5.5em;
+	}
+	/*
+	 * 拇指区：44px 是 iOS 和 Android 共同的下限。两条一起挂，各管一类：
+	 * min-height 只对 block 有效，纵向 padding 只对 inline 有效。
+	 * 但 inline 链接的 padding 一旦超过行距，前后两条的命中框就会叠起来，
+	 * 而后写的那条在命中测试里盖住前一条——0.5rem 时实测每条被抢走 8–23px，
+	 * 点在上一行的字上会打开下一行。所以行内只留 0.2rem（3px，仍在行距内），
+	 * 44 交给真正的控件：卡片标题、导航、胶囊（下面用伪元素扩）。
+	 */
+	:where(main a, footer a):not(.tags a) {
+		padding-block: 0.2rem;
+		min-height: 44px;
+	}
+	:where(main button:not(.chips button)) {
+		min-height: 44px;
+	}
+	/*
+	 * 标签、考点胶囊、科目徽章这一类控件带边框、圆角 999px，直接撑到 44 高
+	 * 就变成一颗颗圆泡，一排一个字能顶到七八千像素长。所以外观维持桌面尺寸，
+	 * 改用伪元素把命中区往外扩 16px——手指够得着，眼睛看到的还是那颗小胶囊。
+	 * 上面的 :not() 就是为此把通用规则从 .tags 身上摘掉；这里连 a.subject、.card-title
+	 * 一起接管，是因为它们的组件样式写了 padding，零特异度的通用规则顶不动。
+	 * 伪元素还会啃到下一行（行距只有 6px，实测上一行只剩 37px），
+	 * 所以给列表项本身 44 高并居中：胶囊 20 + 上下各 12 = 正好一格，行与行的命中区不再重叠。
+	 * 科目徽章写死成 a.subject：/notes/ 上 .subject 是每一科的 <section>，
+	 * 给它挂伪元素等于在整块列表上盖一层透明的板子，里面的链接全被它抢走。
+	 */
+	:where(.tags a, .chips a, .chips button, a.subject, .card-title) {
+		position: relative;
+	}
+	:where(.tags a, .chips a, .chips button, a.subject, .card-title)::before {
+		content: '';
+		position: absolute;
+		inset: -1rem -0.3rem;
+	}
+	:where(.tags > *, .chips > li) {
+		display: grid;
+		align-items: center;
+		/* 只居中到行高，不居中到行宽：面板里「连着这些词」的 ul.chips 是块级列表，
+		 * place-items:center 会把每颗胶囊甩到中间竖着排一列，桌面原本是靠左的。 */
+		justify-items: start;
+		min-height: 44px;
+	}
 }
 
 .sr-only {

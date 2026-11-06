@@ -280,7 +280,9 @@ const filledSubjects = bySubject.filter((s) => s.items.length > 0).length;
 												<FormattedDate date={note.data.pubDate} />
 												<span class="tags">
 													{note.data.tags.slice(0, 6).map((tag) => (
-														<a href={`/knowledge/408/?label=${encodeURIComponent(tag)}`}>{tag}</a>
+														<span>
+															<a href={`/knowledge/408/?label=${encodeURIComponent(tag)}`}>{tag}</a>
+														</span>
 													))}
 												</span>
 											</footer>

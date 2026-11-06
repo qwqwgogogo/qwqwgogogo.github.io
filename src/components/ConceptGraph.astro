@@ -356,6 +356,26 @@ const hubSet = new Set(hubs);
 		.hint .touch {
 			display: inline;
 		}
+		/*
+		 * 上一版给面板里所有 a 加 padding-block: 0.9rem：命中框 51px，
+		 * 而这份列表的行距只有 28px——每条会把上一条的文字整个盖住，
+		 * 实测点在「一个 C 程序在内存…」这一行上，打开的却是下一条。
+		 * 改成让链接变成块，padding 参与排版，命中框与版式一一对应；
+		 * 下划线换回 text-decoration，否则通栏变成一条整行宽的横线。
+		 */
+		.detail :global(ul:not(.chips) > li > a) {
+			display: block;
+			min-height: 44px;
+			padding-block: 0.5rem;
+			border-bottom: 0;
+			text-decoration: underline;
+			text-decoration-color: rgba(191, 63, 38, 0.45);
+			text-underline-offset: 3px;
+		}
+		/* 说明段是正文行内链接，行高只有 20px，padding 不能超过行距，否则又变成互相抢命中区 */
+		.detail :global(.gloss a) {
+			padding-block: 0.2rem;
+		}
 	}
 	.split {
 		display: grid;
@@ -368,6 +388,11 @@ const hubSet = new Set(hubs);
 		.split {
 			grid-template-columns: 1fr;
 		}
+		/* 单列时说明面板原本排在考点列表后面，而 408 那张图的列表有一万多像素高——
+		 * 点完一个考点，解释在十几屏之外，等于没有反馈。让它先出现。 */
+		.detail {
+			order: -1;
+		}
 	}
 	.detail {
 		position: sticky;
@@ -377,6 +402,19 @@ const hubSet = new Set(hubs);
 		border-radius: 12px;
 		background: #fffdf8;
 		font-size: 0.95rem;
+	}
+	/*
+	 * 桌面那套 sticky 在窄屏必须关掉，而且要写在 sticky 那条之后——同一个特异度，
+	 * 谁在后面谁说了算，放前面会被顶掉（第一版就踩了这个坑，线上照旧盖住列表）。
+	 * 一列时面板压在列表上方，吸住不动等于用一块不透明的板子盖住胶囊列表：
+	 * 实测 850 个胶囊的中点被 aside.detail / p.name 抢走。
+	 * 反馈改由脚本负责（选中后把面板拉回视口，见 knowledge.ts 的 select）。
+	 */
+	@media (max-width: 860px) {
+		.detail {
+			position: static;
+			scroll-margin-top: 120px;
+		}
 	}
 	/* 说明面板每次选中都由脚本重建，拿不到 scoped 样式的作用域属性，所以写成子选择器 */
 	.detail :global(.kind) {

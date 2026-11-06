@@ -46,4 +46,10 @@ const isActive = href === pathname || href === '/' + (subpath?.[0] || '');
 	a.active {
 		color: rgb(var(--black));
 	}
+	@media (max-width: 720px) {
+		/* 页眉在手机上折成两行，六个入口原本只有 40px 高，够不着拇指区下限 */
+		a {
+			min-height: 44px;
+		}
+	}
 </style>
